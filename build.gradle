@@ -1,0 +1,226 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+        mavenCentral()
+        maven { url = "https://files.minecraftforge.net/maven" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:3.+'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'scala'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+group 'codechicken'
+archivesBaseName = "TraitMixinCompiler"
+version '1.0.0'
+
+targetCompatibility = "1.8"
+sourceCompatibility = "1.8"
+
+def signProps = [:]
+if (System.getenv("KEY_STORE")) {
+    println "Using Env variables for jar signing."
+    signProps['keyStore'] = System.getenv("KEY_STORE")
+    file(System.getenv("KEY_STORE_PROPS")).withReader {
+        def props = new Properties()
+        props.load(it)
+        signProps.putAll(props)
+    }
+} else if (project.hasProperty('keyStore')) {
+    println "Using Project properties for jar signing."
+    signProps['keyStore'] = project.getProperty('keyStore')
+    signProps['storePass'] = project.getProperty('keyStorePass')
+    signProps['alias'] = project.getProperty('keyStoreAlias')
+    signProps['keyPass'] = project.getProperty('keyStoreKeyPass')
+} else {
+    println 'No signing secrets found, build will not be signed.'
+}
+
+version = "$version." + (System.getenv("BUILD_NUMBER") ?: "1")
+println "Starting build of ${archivesBaseName}, Version: ${version}"
+
+repositories {
+    mavenLocal()
+    jcenter()
+    mavenCentral()
+    maven { url "http://chickenbones.net/maven" }
+    maven { url "https://files.minecraftforge.net/maven" }
+}
+
+sourceSets {
+    forgesupport
+    scalasupport
+}
+
+configurations {
+    shadow
+    implementation.extendsFrom shadow
+    forgesupportImplementation.extendsFrom implementation
+    scalasupportImplementation.extendsFrom implementation
+}
+
+def cASM = 'codechicken:ChickenASM:2.0.0.10'
+dependencies {
+    shadow cASM
+    implementation 'org.ow2.asm:asm:7.2'
+    implementation 'org.ow2.asm:asm-tree:7.2'
+    implementation 'org.ow2.asm:asm-commons:7.2'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'com.google.guava:guava:21.0'
+    implementation 'commons-io:commons-io:2.5'
+    implementation 'org.apache.logging.log4j:log4j-api:2.12.1'
+    implementation 'org.apache.commons:commons-lang3:3.8.1'
+
+    testCompile 'junit:junit:4.12'
+
+    forgesupportImplementation sourceSets.main.output
+    forgesupportImplementation('cpw.mods:modlauncher:5.1.0') { transitive false }
+    forgesupportImplementation('net.minecraftforge:forgespi:2.1.2') { transitive false }
+    forgesupportImplementation 'net.minecraftforge:forge:1.15.2-31.2.0:universal'
+    forgesupportImplementation 'net.minecraftforge:forge:1.15.2-31.2.0:launcher'
+
+    scalasupportImplementation sourceSets.main.output
+    scalasupportImplementation 'org.scala-lang:scala-library:2.13.1'
+    scalasupportImplementation 'org.scala-lang:scala-reflect:2.13.1'
+}
+
+jar {
+    classifier 'base'
+}
+
+shadowJar {
+    classifier ''
+    manifest {
+        attributes 'Specification-Title': archivesBaseName
+        attributes 'Specification-Vendor': 'covers1624'
+        attributes 'Specification-Version': "1"
+        attributes 'Implementation-Title': archivesBaseName
+        attributes 'Implementation-Vendor': 'covers1624'
+        attributes 'Implementation-Version': version
+        attributes 'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+
+        attributes 'FMLModType': 'LIBRARY'
+        attributes 'Maven-Artifact': "${project.group}:${project.archivesBaseName}:${project.version}"
+    }
+
+    configurations = [project.configurations.shadow]
+    dependencies {
+        include(dependency(cASM))
+    }
+    exclude 'module-info.class'
+}
+
+evaluationDependsOnChildren()
+task scalaJar(type: Jar) {
+    classifier 'scala'
+    dependsOn tasks.compileScalasupportScala
+    from sourceSets.scalasupport.output
+    manifest {
+        attributes 'FMLModType': 'LIBRARY'
+    }
+}
+
+task forgeJar(type: Jar) {
+    classifier 'forge'
+    dependsOn tasks.compileForgesupportJava
+    from sourceSets.forgesupport.output
+    manifest {
+        attributes 'FMLModType': 'LIBRARY'
+    }
+}
+
+[shadowJar, scalaJar, forgeJar].each { baseTask ->
+    def sTask = "sign${baseTask.name.capitalize()}"
+    baseTask.finalizedBy sTask
+    task "$sTask"(type: net.minecraftforge.gradle.common.task.SignJar) {
+        onlyIf { !signProps.isEmpty() }
+
+        if (!signProps.isEmpty()) {
+            keyStore = signProps.keyStore
+            alias = signProps.alias
+            storePass = signProps.storePass
+            keyPass = signProps.keyPass
+
+            inputFile = baseTask.archivePath
+            outputFile = baseTask.archivePath
+        }
+    }
+}
+
+task srcJar(type: ShadowJar) {
+    classifier 'sources'
+    from sourceSets.main.allSource
+    from sourceSets.scalasupport.allSource
+    from sourceSets.forgesupport.allSource
+    mergeServiceFiles()
+}
+
+publishing {
+    repositories {
+        if (System.getenv('MAVEN_PASS')) {
+            maven {
+                url "https://maven-upload.covers1624.net/"
+                credentials {
+                    username 'covers1624'
+                    password System.getenv('MAVEN_PASS')
+                }
+            }
+        }
+    }
+    publications {
+        TraitMixinCompiler(MavenPublication) {
+            groupId project.group
+            artifactId project.archivesBaseName
+            version project.version
+            artifact shadowJar
+            artifact scalaJar
+            artifact forgeJar
+            artifact srcJar
+
+            pom {
+                name = archivesBaseName
+                description = archivesBaseName
+                //The publish plugin doesnt like GString's here apparently..
+                url = "https://github.com/TheCBProject/${archivesBaseName}".toString()
+                scm {
+                    url = "https://github.com/TheCBProject/${archivesBaseName}".toString()
+                    connection = "scm:git:git://github.com/TheCBProject/${archivesBaseName}.git".toString()
+                    connection = "scm:git:git@github.com:TheCBProject/${archivesBaseName}.git".toString()
+                }
+
+                issueManagement {
+                    system = 'github'
+                    url = "https://github.com/TheCBProject/${archivesBaseName}/issues".toString()
+                }
+                licenses {
+                    license {
+                        name = "MIT"
+                        url = "https://raw.githubusercontent.com/TheCBProject/TraitMixinCompiler/master/LICENSE.txt"
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'covers1624'
+                        name = 'covers1624'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'chicken-bones'
+                        name = 'chicken-bones'
+                    }
+                }
+            }
+        }
+    }
+}
