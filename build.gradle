@@ -52,7 +52,7 @@ repositories {
     mavenLocal()
     jcenter()
     mavenCentral()
-    maven { url "http://chickenbones.net/maven" }
+    maven { url "https://chickenbones.net/maven" }
     maven { url "https://files.minecraftforge.net/maven" }
 }
 
