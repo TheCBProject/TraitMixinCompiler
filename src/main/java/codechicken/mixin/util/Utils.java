@@ -3,6 +3,7 @@ package codechicken.mixin.util;
 import com.google.common.collect.Streams;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.lang.reflect.Constructor;
@@ -150,6 +151,11 @@ public class Utils {
         } else {
             throw new IllegalArgumentException("Unknown const: " + obj);
         }
+    }
+
+    public static boolean isScalaClass(ClassNode node) {
+        return node.visibleAnnotations.stream()//
+                .anyMatch(e -> e.desc.equals("Lscala/reflect/ScalaSignature;"));
     }
 
     /**
