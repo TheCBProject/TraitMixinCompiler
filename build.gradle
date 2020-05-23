@@ -59,12 +59,16 @@ repositories {
 sourceSets {
     forgesupport
     scalasupport
+    test.runtimeClasspath += scalasupport.output
 }
 
 configurations {
     shadow
+    scalalib
     implementation.extendsFrom shadow
+    testCompile.extendsFrom scalalib
     forgesupportImplementation.extendsFrom implementation
+    scalasupportImplementation.extendsFrom scalalib
     scalasupportImplementation.extendsFrom implementation
 }
 
@@ -80,7 +84,8 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:2.12.1'
     implementation 'org.apache.commons:commons-lang3:3.8.1'
 
-    testCompile 'junit:junit:4.12'
+    testCompile 'org.apache.logging.log4j:log4j-core:2.12.1'
+    testCompile 'org.junit.jupiter:junit-jupiter-api:5.0.0'
 
     forgesupportImplementation sourceSets.main.output
     forgesupportImplementation('cpw.mods:modlauncher:5.1.0') { transitive false }
@@ -88,9 +93,9 @@ dependencies {
     forgesupportImplementation 'net.minecraftforge:forge:1.15.2-31.2.0:universal'
     forgesupportImplementation 'net.minecraftforge:forge:1.15.2-31.2.0:launcher'
 
+    scalalib 'org.scala-lang:scala-library:2.13.1'
+    scalalib 'org.scala-lang:scala-reflect:2.13.1'
     scalasupportImplementation sourceSets.main.output
-    scalasupportImplementation 'org.scala-lang:scala-library:2.13.1'
-    scalasupportImplementation 'org.scala-lang:scala-reflect:2.13.1'
 }
 
 jar {
