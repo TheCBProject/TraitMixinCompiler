@@ -90,7 +90,7 @@ public class MixinFactoryImpl<B> implements MixinFactory<B> {
         return info.getName().equals(parentName) || info.getSuperClass().filter(e -> checkParent(parentName, e)).isPresent();
     }
 
-    private Constructor<? extends B> compile(ImmutableSet<TraitKey> traits) {
+    private synchronized Constructor<? extends B> compile(ImmutableSet<TraitKey> traits) {
         Class<? extends B> clazz = classCache.computeIfAbsent(traits, e -> {
             Set<String> traitNames = traits.stream().map(TraitKey::getTName).collect(Collectors.toSet());
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);

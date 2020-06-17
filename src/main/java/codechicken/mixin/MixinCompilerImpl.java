@@ -28,7 +28,6 @@ import static org.objectweb.asm.Opcodes.*;
  * <p>
  * Created by covers1624 on 2/11/20.
  */
-@SuppressWarnings ("UnstableApiUsage")
 public class MixinCompilerImpl implements MixinCompiler {
 
     private static final Logger logger = LogManager.getLogger("CodeChicken/MixinCompiler");
@@ -39,9 +38,9 @@ public class MixinCompilerImpl implements MixinCompiler {
     private final List<MixinLanguageSupport> languageSupportList;
     private final Map<String, MixinLanguageSupport> languageSupportMap;
 
-    private final Map<String, byte[]> traitByteMap = new HashMap<>();
-    private final Map<String, ClassInfo> infoCache = new HashMap<>();
-    private final Map<String, MixinInfo> mixinMap = new HashMap<>();
+    private final Map<String, byte[]> traitByteMap = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, ClassInfo> infoCache = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, MixinInfo> mixinMap = Collections.synchronizedMap(new HashMap<>());
 
     public MixinCompilerImpl() {
         this(new MixinBackend.SimpleMixinBackend());
