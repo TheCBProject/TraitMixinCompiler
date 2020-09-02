@@ -107,10 +107,12 @@ public class JavaTraitGenerator {
         while ((insn = pointer.get()) != null) {
             if (insn instanceof FieldInsnNode) {
                 FieldInsnNode fInsn = (FieldInsnNode) insn;
-                if (insn.getOpcode() == GETFIELD) {
-                    pointer.replace(new MethodInsnNode(INVOKEINTERFACE, cNode.name, fieldNameLookup.get(fInsn.name), "()" + fInsn.desc, true));
-                } else if (insn.getOpcode() == PUTFIELD) {
-                    pointer.replace(new MethodInsnNode(INVOKEINTERFACE, cNode.name, fieldNameLookup.get(fInsn.name) + "_$eq", "(" + fInsn.desc + ")V", true));
+                if (fInsn.owner.equals(cNode.name)) {
+                    if (insn.getOpcode() == GETFIELD) {
+                        pointer.replace(new MethodInsnNode(INVOKEINTERFACE, cNode.name, fieldNameLookup.get(fInsn.name), "()" + fInsn.desc, true));
+                    } else if (insn.getOpcode() == PUTFIELD) {
+                        pointer.replace(new MethodInsnNode(INVOKEINTERFACE, cNode.name, fieldNameLookup.get(fInsn.name) + "_$eq", "(" + fInsn.desc + ")V", true));
+                    }
                 }
             } else if (insn instanceof MethodInsnNode) {
                 MethodInsnNode mInsn = (MethodInsnNode) insn;
