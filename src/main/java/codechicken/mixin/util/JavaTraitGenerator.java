@@ -198,8 +198,7 @@ public class JavaTraitGenerator {
             return Optional.empty();
         }
 
-        return mixinCompiler.getClassInfo(stack.owner.getInternalName()).getSuperClass()//
-                .flatMap(e -> e.findPublicImpl(methodName, mInsn.desc));
+        return mixinCompiler.getClassInfo(stack.owner.getInternalName()).findPublicParentImpl(methodName, mInsn.desc);
     }
 
     private MethodNode staticClone(MethodNode mNode, String name, int access) {

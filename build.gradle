@@ -21,7 +21,7 @@ plugins {
 
 group 'codechicken'
 archivesBaseName = "TraitMixinCompiler"
-version '1.0.1'
+version '1.0.2'
 
 targetCompatibility = "1.8"
 sourceCompatibility = "1.8"
@@ -66,7 +66,7 @@ configurations {
     shadow
     scalalib
     implementation.extendsFrom shadow
-    testCompile.extendsFrom scalalib
+    testImplementation.extendsFrom scalalib
     forgesupportImplementation.extendsFrom implementation
     scalasupportImplementation.extendsFrom scalalib
     scalasupportImplementation.extendsFrom implementation
@@ -84,9 +84,9 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:2.12.1'
     implementation 'org.apache.commons:commons-lang3:3.8.1'
 
-    testCompile 'org.apache.logging.log4j:log4j-core:2.12.1'
-    testCompile 'org.junit.jupiter:junit-jupiter-api:5.0.0'
-    testCompile sourceSets.scalasupport.output
+    testImplementation 'org.apache.logging.log4j:log4j-core:2.12.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.0.0'
+    testImplementation sourceSets.scalasupport.output
 
     forgesupportImplementation sourceSets.main.output
     forgesupportImplementation('cpw.mods:modlauncher:5.1.0') { transitive false }

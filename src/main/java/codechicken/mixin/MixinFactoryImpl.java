@@ -92,7 +92,7 @@ public class MixinFactoryImpl<B> implements MixinFactory<B> {
 
     private synchronized Constructor<? extends B> compile(ImmutableSet<TraitKey> traits) {
         Class<? extends B> clazz = classCache.computeIfAbsent(traits, e -> {
-            Set<String> traitNames = traits.stream().map(TraitKey::getTName).collect(Collectors.toSet());
+            Set<String> traitNames = traits.stream().map(TraitKey::getTName).collect(ImmutableSet.toImmutableSet());
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);
             traitLookup.put(compiled, traits);
             compileCallbacks.forEach(callback -> callback.accept(compiled, traits));

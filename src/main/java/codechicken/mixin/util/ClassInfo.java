@@ -45,6 +45,14 @@ public abstract class ClassInfo {
                 .findFirst();
     }
 
+    public Optional<MethodInfo> findPublicParentImpl(String name, String desc) {
+        return getParentMethods()//
+                .filter(m -> m.getName().equals(name))//
+                .filter(m -> m.getDesc().equals(desc))//
+                .filter(m -> !m.isAbstract() && !m.isPrivate())//
+                .findFirst();
+    }
+
     public Optional<ClassInfo> concreteParent() {
         return getSuperClass();
     }
