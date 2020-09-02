@@ -14,6 +14,8 @@ public class Mixin1 extends MixinBase {
 
     @Override
     public String append(String otherStuff) {
+        ClassWithField classWithField = new ClassWithField();
+        System.out.println(classWithField.someField);
         return stuff + otherStuff;
     }
 

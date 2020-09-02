@@ -21,7 +21,7 @@ plugins {
 
 group 'codechicken'
 archivesBaseName = "TraitMixinCompiler"
-version '1.0.0'
+version '1.0.1'
 
 targetCompatibility = "1.8"
 sourceCompatibility = "1.8"
@@ -86,6 +86,7 @@ dependencies {
 
     testCompile 'org.apache.logging.log4j:log4j-core:2.12.1'
     testCompile 'org.junit.jupiter:junit-jupiter-api:5.0.0'
+    testCompile sourceSets.scalasupport.output
 
     forgesupportImplementation sourceSets.main.output
     forgesupportImplementation('cpw.mods:modlauncher:5.1.0') { transitive false }
