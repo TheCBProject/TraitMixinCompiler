@@ -199,6 +199,7 @@ public class StackAnalyser {
                 } else if (DEBUG) {
                     logger.warn("Unhandled Opcode for IincInsnNode: {}", insn.getOpcode());
                 }
+                break;
             }
             case JUMP_INSN: {
                 JumpInsnNode insn = (JumpInsnNode) aInsn;
@@ -350,6 +351,7 @@ public class StackAnalyser {
                 if (handlerNode != null) {
                     push(new CaughtException(insn, Type.getObjectType(handlerNode.type)));
                 }
+                break;
             }
             default:
                 if (DEBUG) {
