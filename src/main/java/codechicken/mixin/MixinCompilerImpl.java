@@ -3,6 +3,7 @@ package codechicken.mixin;
 import codechicken.asm.ASMHelper;
 import codechicken.mixin.api.MixinBackend;
 import codechicken.mixin.api.MixinCompiler;
+import codechicken.mixin.api.MixinDebugger;
 import codechicken.mixin.api.MixinLanguageSupport;
 import codechicken.mixin.util.*;
 import com.google.common.collect.Lists;
@@ -30,11 +31,11 @@ import static org.objectweb.asm.Opcodes.*;
  */
 public class MixinCompilerImpl implements MixinCompiler {
 
+    public static final Level LOG_LEVEL = Level.getLevel(System.getProperty("codechicken.mixin.log_level", "DEBUG"));
     private static final Logger logger = LogManager.getLogger("CodeChicken/MixinCompiler");
-    private static final Level LOG_LEVEL = Level.getLevel(System.getProperty("codechicken.mixin.log_level", "DEBUG"));
 
     private final MixinBackend mixinBackend;
-    private final List<LanguageSupportInstance> languageSupportInstances;
+    private final MixinDebugger debugger;
     private final List<MixinLanguageSupport> languageSupportList;
     private final Map<String, MixinLanguageSupport> languageSupportMap;
 
@@ -47,12 +48,17 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     public MixinCompilerImpl(MixinBackend mixinBackend) {
+        this(mixinBackend, new MixinDebugger.NullDebugger());
+    }
+
+    public MixinCompilerImpl(MixinBackend mixinBackend, MixinDebugger debugger) {
         this.mixinBackend = mixinBackend;
+        this.debugger = debugger;
         logger.log(LOG_LEVEL, "Starting CodeChicken MixinCompiler.");
         logger.log(LOG_LEVEL, "Loading MixinLanguageSupport services..");
         long start = System.nanoTime();
         SimpleServiceLoader<MixinLanguageSupport> langSupportLoader = new SimpleServiceLoader<>(MixinLanguageSupport.class);
-        languageSupportInstances = langSupportLoader.poll().getNewServices().stream()//
+        List<LanguageSupportInstance> languageSupportInstances = langSupportLoader.poll().getNewServices().stream()//
                 .map(LanguageSupportInstance::new)//
                 .sorted(Comparator.comparingInt(e -> e.sortIndex))//
                 .collect(Collectors.toList());
@@ -210,12 +216,14 @@ public class MixinCompilerImpl implements MixinCompiler {
         String asmName = Utils.asmName(name);
         traitByteMap.put(asmName, bytes);
         infoCache.remove(asmName);
+        debugger.defineInternal(name, bytes);
     }
 
     @Override
     public Class<?> defineClass(String name, byte[] bytes) {
         String asmName = Utils.asmName(name);
         defineInternal(asmName, bytes);
+        debugger.defineClass(name, bytes);
         return mixinBackend.defineClass(name, bytes);
 
     }

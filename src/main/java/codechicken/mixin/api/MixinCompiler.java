@@ -29,13 +29,25 @@ public interface MixinCompiler {
     }
 
     /**
-     * Create a {@link MixinCompiler} instance, with the given MixinBackend.1
+     * Create a {@link MixinCompiler} instance, with the given MixinBackend.
      *
      * @param backend The MixinBackend.
      * @return The instance.
      */
     static MixinCompiler create(MixinBackend backend) {
         return new MixinCompilerImpl(backend);
+    }
+
+    /**
+     * Create a {@link MixinCompiler} instance, with the
+     * given {@link MixinBackend} and {@link MixinDebugger}.
+     *
+     * @param backend  The MixinBackend.
+     * @param debugger The MixinDebugger.
+     * @return The instance.
+     */
+    static MixinCompiler create(MixinBackend backend, MixinDebugger debugger) {
+        return new MixinCompilerImpl(backend, debugger);
     }
 
     /**

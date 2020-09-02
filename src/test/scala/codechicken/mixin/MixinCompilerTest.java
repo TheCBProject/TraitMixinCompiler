@@ -1,13 +1,17 @@
 package codechicken.mixin;
 
+import codechicken.mixin.api.MixinBackend;
 import codechicken.mixin.api.MixinCompiler;
 import codechicken.mixin.api.MixinFactory;
 import codechicken.mixin.classes.Mixin1;
 import codechicken.mixin.classes.Mixin2;
 import codechicken.mixin.classes.MixinBase;
+import codechicken.mixin.util.SimpleDebugger;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,7 +30,7 @@ public class MixinCompilerTest {
     @BeforeAll
     public static void setup() {
         System.setProperty("codechicken.mixin.log_level", "INFO");
-        compiler = MixinCompiler.create();
+        compiler = MixinCompiler.create(new MixinBackend.SimpleMixinBackend(), new SimpleDebugger(Paths.get("dumps"), SimpleDebugger.DumpType.BINARY));
         factory = new MixinFactoryImpl<>(compiler, MixinBase.class, "tests");
     }
 
