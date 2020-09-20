@@ -19,7 +19,7 @@ import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 /**
  * Defines abstract logic for loading Mixins for different languages.
  * These are loaded using a {@link ServiceLoader} from the classpath.
- *
+ * <p>
  * Created by covers1624 on 2/16/20.
  */
 public interface MixinLanguageSupport {
@@ -108,7 +108,10 @@ public interface MixinLanguageSupport {
         @Override
         public Optional<MixinInfo> buildMixinTrait(ClassNode cNode) {
             JavaTraitGenerator generator = traitGeneratorFactory.apply(mixinCompiler, cNode);
-            ClassNode tNode = generator.getClassNode();
+            generator.getStaticNode().ifPresent(node -> {
+                mixinCompiler.defineClass(node.name, ASMHelper.createBytes(node, COMPUTE_FRAMES | COMPUTE_MAXS));
+            });
+            ClassNode tNode = generator.getTraitNode();
             MixinInfo info = generator.getMixinInfo();
             mixinCompiler.defineClass(tNode.name, ASMHelper.createBytes(tNode, COMPUTE_FRAMES | COMPUTE_MAXS));
             return Optional.of(info);

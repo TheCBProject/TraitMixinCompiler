@@ -63,12 +63,6 @@ class MixinScalaLanguageSupport(mixinCompiler: MixinCompiler) extends MixinLangu
     }
 
     override def buildMixinTrait(cNode: ClassNode): Optional[MixinInfo] = {
-        //If we hit cache, return that.
-        Option(mixinCompiler.getMixinInfo(cNode.name)) match {
-            case Some(info) => return Some(info)
-            case None =>
-        }
-
         //If we aren't a scala class, we don't do anything.
         val info = mixinCompiler.getClassInfo(cNode) match {
             case info: ScalaClassInfo if info.isTrait => info

@@ -73,15 +73,16 @@ public class SimpleDebugger implements MixinDebugger {
                             ClassReader reader = new ClassReader(bytes);
                             reader.accept(cv, ClassReader.EXPAND_FRAMES);
                         }
+                        break;
                     } catch (IOException e) {
                         throw e;// Rethrow
                     } catch (Exception e) {
                         logger.warn("Fatal exception dumping as text. Dumping as binary.", e);
+                        //Fall through to Binary.
                     }
-                    break;
                 }
                 case BINARY: {
-                    logger.log(LOG_LEVEL, "Dumping '{}' from {} as binary.}", name, from);
+                    logger.log(LOG_LEVEL, "Dumping '{}' from {} as binary.", name, from);
                     Path path = folder.resolve(name + ".class");
                     try (OutputStream os = Files.newOutputStream(path)) {
                         os.write(bytes);

@@ -1,5 +1,6 @@
 package codechicken.mixin.util;
 
+import codechicken.asm.StackAnalyser;
 import com.google.common.collect.Streams;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -141,32 +142,6 @@ public class Utils {
 
     public static void writeStaticBridge(MethodNode mv, String mName, MixinInfo info) {
         writeBridge(mv, mv.desc, INVOKESTATIC, info.getName(), mName + "$", staticDesc(info.getName(), mv.desc));
-    }
-
-    public static Type computeConstType(Object obj) {
-        if (obj instanceof Byte) {
-            return Type.BYTE_TYPE;
-        } else if (obj instanceof Short) {
-            return Type.SHORT_TYPE;
-        } else if (obj instanceof Integer) {
-            return Type.INT_TYPE;
-        } else if (obj instanceof Long) {
-            return Type.LONG_TYPE;
-        } else if (obj instanceof Float) {
-            return Type.FLOAT_TYPE;
-        } else if (obj instanceof Double) {
-            return Type.DOUBLE_TYPE;
-        } else if (obj instanceof Character) {
-            return Type.CHAR_TYPE;
-        } else if (obj instanceof Boolean) {
-            return Type.BOOLEAN_TYPE;
-        } else if (obj instanceof String) {
-            return Type.getObjectType("java/lang/String");
-        } else if (obj == null) {
-            return Type.getObjectType("java/lang/Object");
-        } else {
-            throw new IllegalArgumentException("Unknown const: " + obj);
-        }
     }
 
     public static boolean isScalaClass(ClassNode node) {

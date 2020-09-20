@@ -230,12 +230,21 @@ public class MixinCompilerImpl implements MixinCompiler {
 
     @Override
     public MixinInfo registerTrait(ClassNode cNode) {
+        // Cache hit.
+        MixinInfo info = mixinMap.get(cNode.name);
+        if (info != null) {
+            return info;
+        }
+
         for (MixinLanguageSupport languageSupport : languageSupportList) {
             Optional<MixinInfo> opt = languageSupport.buildMixinTrait(cNode);
             if (!opt.isPresent()) {
                 continue;
             }
-            MixinInfo info = opt.get();
+            info = opt.get();
+            if (!cNode.name.equals(info.getName())) {
+                throw new IllegalStateException("Traits must have the same name as their ClassNode. Got: " + info.getName() + ", Expected: " + cNode.name);
+            }
             mixinMap.put(info.getName(), info);
             return info;
         }

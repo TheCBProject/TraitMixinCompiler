@@ -72,9 +72,8 @@ configurations {
     scalasupportImplementation.extendsFrom implementation
 }
 
-def cASM = 'codechicken:ChickenASM:2.0.0.10'
 dependencies {
-    shadow cASM
+    shadow 'codechicken:ChickenASM:2.0.0.12'
     implementation 'org.ow2.asm:asm:7.2'
     implementation 'org.ow2.asm:asm-tree:7.2'
     implementation 'org.ow2.asm:asm-commons:7.2'
@@ -119,9 +118,6 @@ shadowJar {
     }
 
     configurations = [project.configurations.shadow]
-    dependencies {
-        include(dependency(cASM))
-    }
     exclude 'module-info.class'
 }
 

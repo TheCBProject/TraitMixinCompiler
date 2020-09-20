@@ -36,10 +36,6 @@ public class MixinInfo {
 
     }
 
-    public String getTName() {
-        return getName(); //+ "$class"
-    }
-
     public String getName() {
         return name;
     }

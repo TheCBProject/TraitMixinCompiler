@@ -1,5 +1,6 @@
-package codechicken.mixin
+package codechicken.mixin.test
 
+import codechicken.mixin.MixinFactoryImpl
 import codechicken.mixin.api.MixinCompiler
 import org.junit.jupiter.api.Test
 
