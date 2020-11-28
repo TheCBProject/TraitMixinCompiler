@@ -17,6 +17,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
@@ -52,13 +53,16 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     public MixinCompilerImpl(MixinBackend mixinBackend, MixinDebugger debugger) {
+        this(mixinBackend, debugger, () -> new SimpleServiceLoader<>(MixinLanguageSupport.class).poll().getNewServices());
+    }
+
+    public MixinCompilerImpl(MixinBackend mixinBackend, MixinDebugger debugger, Supplier<Collection<Class<? extends MixinLanguageSupport>>> supportSupplier) {
         this.mixinBackend = mixinBackend;
         this.debugger = debugger;
         logger.log(LOG_LEVEL, "Starting CodeChicken MixinCompiler.");
         logger.log(LOG_LEVEL, "Loading MixinLanguageSupport services..");
         long start = System.nanoTime();
-        SimpleServiceLoader<MixinLanguageSupport> langSupportLoader = new SimpleServiceLoader<>(MixinLanguageSupport.class);
-        List<LanguageSupportInstance> languageSupportInstances = langSupportLoader.poll().getNewServices().stream()//
+        List<LanguageSupportInstance> languageSupportInstances = supportSupplier.get().stream()//
                 .map(LanguageSupportInstance::new)//
                 .sorted(Comparator.comparingInt(e -> e.sortIndex))//
                 .collect(Collectors.toList());

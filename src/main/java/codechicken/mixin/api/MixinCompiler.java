@@ -8,6 +8,7 @@ import org.objectweb.asm.tree.ClassNode;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 
@@ -48,6 +49,20 @@ public interface MixinCompiler {
      */
     static MixinCompiler create(MixinBackend backend, MixinDebugger debugger) {
         return new MixinCompilerImpl(backend, debugger);
+    }
+
+    /**
+     * Create a {@link MixinCompiler} instance, with the
+     * given {@link MixinBackend}, {@link MixinDebugger}
+     * and the specified Collection of {@link MixinLanguageSupport}s.
+     *
+     * @param backend  The MixinBackend.
+     * @param debugger The MixinDebugger.
+     * @param supports The MixinLanguageSupport classes to load.
+     * @return The instance.
+     */
+    static MixinCompiler create(MixinBackend backend, MixinDebugger debugger, Collection<Class<? extends MixinLanguageSupport>> supports) {
+        return new MixinCompilerImpl(backend, debugger, () -> supports);
     }
 
     /**

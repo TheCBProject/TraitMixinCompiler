@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 buildscript {
     repositories {
         mavenLocal()
@@ -17,11 +15,12 @@ plugins {
     id 'scala'
     id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id "net.covers1624.signing" version '1.0.0.2'
 }
 
 group 'codechicken'
 archivesBaseName = "TraitMixinCompiler"
-version '1.0.2'
+version '1.1.0'
 
 targetCompatibility = "1.8"
 sourceCompatibility = "1.8"
@@ -73,7 +72,7 @@ configurations {
 }
 
 dependencies {
-    shadow 'codechicken:ChickenASM:2.0.0.12'
+    shadow 'codechicken:ChickenASM:2.0.1.14'
     implementation 'org.ow2.asm:asm:7.2'
     implementation 'org.ow2.asm:asm-tree:7.2'
     implementation 'org.ow2.asm:asm-commons:7.2'
@@ -96,6 +95,21 @@ dependencies {
     scalalib 'org.scala-lang:scala-library:2.13.1'
     scalalib 'org.scala-lang:scala-reflect:2.13.1'
     scalasupportImplementation sourceSets.main.output
+}
+
+signing {
+    if (!signProps.empty) {
+        jars {
+            sign shadowJar
+            sign scalaJar
+            sign forgeJar
+
+            keyStore = signProps.keyStore
+            alias = signProps.alias
+            storePass = signProps.storePass
+            keyPass = signProps.keyPass
+        }
+    }
 }
 
 jar {
@@ -121,14 +135,22 @@ shadowJar {
     exclude 'module-info.class'
 }
 
-evaluationDependsOnChildren()
-task scalaJar(type: Jar) {
+task scalaJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     classifier 'scala'
     dependsOn tasks.compileScalasupportScala
     from sourceSets.scalasupport.output
     manifest {
         attributes 'FMLModType': 'LIBRARY'
     }
+
+    configurations = [project.configurations.scalalib]
+    dependencies {
+        include(dependency("org.scala-lang:scala-reflect"))
+    }
+    minimize {
+        include(dependency("org.scala-lang:scala-reflect"))
+    }
+    relocate 'scala.reflect.internal.pickling', 'codechicken.repack.scala.reflect.internal.pickling'
 }
 
 task forgeJar(type: Jar) {
@@ -140,25 +162,7 @@ task forgeJar(type: Jar) {
     }
 }
 
-[shadowJar, scalaJar, forgeJar].each { baseTask ->
-    def sTask = "sign${baseTask.name.capitalize()}"
-    baseTask.finalizedBy sTask
-    task "$sTask"(type: net.minecraftforge.gradle.common.task.SignJar) {
-        onlyIf { !signProps.isEmpty() }
-
-        if (!signProps.isEmpty()) {
-            keyStore = signProps.keyStore
-            alias = signProps.alias
-            storePass = signProps.storePass
-            keyPass = signProps.keyPass
-
-            inputFile = baseTask.archivePath
-            outputFile = baseTask.archivePath
-        }
-    }
-}
-
-task srcJar(type: ShadowJar) {
+task srcJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     classifier 'sources'
     from sourceSets.main.allSource
     from sourceSets.scalasupport.allSource
