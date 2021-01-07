@@ -7,6 +7,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -37,7 +39,7 @@ public interface MixinBackend {
      * @return The defined class.
      */
     @Nonnull
-    Class<?> defineClass(String name, byte[] bytes);
+    <T> Class<T> defineClass(String name, byte[] bytes);
 
     /**
      * Loads a class.
@@ -66,13 +68,15 @@ public interface MixinBackend {
      */
     class SimpleMixinBackend implements MixinBackend {
 
-        protected static final Method m_defineClass;
+        protected static final MethodHandle m_defineClass;
 
         static {
             try {
-                m_defineClass = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
-                m_defineClass.setAccessible(true);
-            } catch (NoSuchMethodException e) {
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                Method m = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
+                m.setAccessible(true);
+                m_defineClass = lookup.unreflect(m);
+            } catch (Throwable e) {
                 throw new RuntimeException("Unable to retrieve methods via reflection.", e);
             }
         }
@@ -101,10 +105,11 @@ public interface MixinBackend {
         }
 
         @Override
-        public Class<?> defineClass(String name, byte[] bytes) {
+        @SuppressWarnings ("unchecked")
+        public <T> Class<T> defineClass(String name, byte[] bytes) {
             try {
-                return (Class<?>) m_defineClass.invoke(classLoader, bytes, 0, bytes.length);
-            } catch (IllegalAccessException | InvocationTargetException e) {
+                return (Class<T>) m_defineClass.invoke(classLoader, bytes, 0, bytes.length);
+            } catch (Throwable e) {
                 throw new RuntimeException("Failed to define class '" + name + "'.", e);
             }
         }

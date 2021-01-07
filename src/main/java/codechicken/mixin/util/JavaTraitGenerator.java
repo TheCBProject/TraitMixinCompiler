@@ -6,6 +6,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,9 +48,6 @@ public class JavaTraitGenerator {
 
     protected void checkNode() {
         preCheckNode();
-        if ((cNode.access & ACC_PUBLIC) != 0) {
-            throw new IllegalArgumentException("Java trait '" + cNode.name + "' must not be declared public.");
-        }
         if ((cNode.access & ACC_INTERFACE) != 0) {
             if (Utils.isScalaClass(cNode)) {
                 throw new IllegalArgumentException("Cannot register scala trait interface '" + cNode.name + "' as a mixin trait. Please include the scala module on the classpath.");
@@ -58,6 +56,15 @@ public class JavaTraitGenerator {
         }
         if (!cNode.innerClasses.isEmpty() && cNode.innerClasses.stream().noneMatch(this::checkInner)) {
             throw new IllegalArgumentException("Found illegal inner class for '" + cNode.name + "', use scala.");
+        }
+        List<FieldNode> invalidFields = cNode.fields.stream()
+                .filter(e -> (e.access & ACC_PRIVATE) == 0)
+                .collect(Collectors.toList());
+        if (!invalidFields.isEmpty()) {
+            String fields = invalidFields.stream()
+                    .map(e -> e.name)
+                    .collect(Collectors.joining(", ", "[", "]"));
+            throw new IllegalArgumentException("Illegal fields " + fields + " found in " + cNode.name + ". These fields must be private.");
         }
 
         if ((cNode.access & ACC_ABSTRACT) != 0) {
@@ -68,27 +75,22 @@ public class JavaTraitGenerator {
     protected void operate() {
         preProcessTrait();
 
-        staticFields = cNode.fields.stream()//
-                .filter(e -> (e.access & ACC_STATIC) != 0)//
-                .collect(Collectors.toList());
-        staticFields.forEach(e -> {
-            if ((e.access & ACC_PRIVATE) == 0) {
-                throw new IllegalStateException("Static field '" + e.name + "' in java trait '" + cNode.name + "' must be private.");
-            }
-        });
-
-        instanceFields = cNode.fields.stream()//
-                .filter(e -> (e.access & ACC_STATIC) == 0)//
+        staticFields = cNode.fields.stream()
+                .filter(e -> (e.access & ACC_STATIC) != 0)
                 .collect(Collectors.toList());
 
-        traitFields = instanceFields.stream()//
-                .map(f -> new FieldMixin(f.name, f.desc, f.access))//
+        instanceFields = cNode.fields.stream()
+                .filter(e -> (e.access & ACC_STATIC) == 0)
                 .collect(Collectors.toList());
 
-        fieldNameLookup = traitFields.stream()//
+        traitFields = instanceFields.stream()
+                .map(f -> new FieldMixin(f.name, f.desc, f.access))
+                .collect(Collectors.toList());
+
+        fieldNameLookup = traitFields.stream()
                 .collect(Collectors.toMap(FieldMixin::getName, e -> e.getAccessName(cNode.name)));
 
-        methodSigLookup = cNode.methods.stream()//
+        methodSigLookup = cNode.methods.stream()
                 .collect(Collectors.toMap(e -> e.name + e.desc, Function.identity()));
 
         beforeTransform();

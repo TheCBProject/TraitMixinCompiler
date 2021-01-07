@@ -157,7 +157,7 @@ public interface MixinCompiler {
      * @return The defined class.
      */
     @Nonnull
-    Class<?> defineClass(@AsmName String name, byte[] bytes);
+    <T> Class<T> defineClass(@AsmName String name, byte[] bytes);
 
     /**
      * Compiles a new class with the given name, super Class, and traits.

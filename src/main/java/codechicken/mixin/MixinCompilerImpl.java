@@ -224,7 +224,7 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
-    public Class<?> defineClass(String name, byte[] bytes) {
+    public <T> Class<T> defineClass(String name, byte[] bytes) {
         String asmName = Utils.asmName(name);
         defineInternal(asmName, bytes);
         debugger.defineClass(name, bytes);
