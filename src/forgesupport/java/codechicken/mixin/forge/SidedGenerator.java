@@ -26,7 +26,7 @@ import static codechicken.mixin.util.Utils.asmName;
  * Created by covers1624 on 4/14/20.
  */
 @SuppressWarnings ("UnstableApiUsage")//We are careful
-public class SidedGenerator<B, T> extends MixinFactoryImpl<B> {
+public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
 
     private static final Logger logger = LogManager.getLogger();
 
@@ -36,8 +36,8 @@ public class SidedGenerator<B, T> extends MixinFactoryImpl<B> {
     protected final Map<Class<?>, ImmutableSet<TraitKey>> clientObjectTraitCache = new HashMap<>();
     protected final Map<Class<?>, ImmutableSet<TraitKey>> serverObjectTraitCache = new HashMap<>();
 
-    protected SidedGenerator(MixinCompiler mixinCompiler, Class<B> baseType, String classSuffix, Class<?>... ctorParamTypes) {
-        super(mixinCompiler, baseType, classSuffix, ctorParamTypes);
+    protected SidedGenerator(MixinCompiler mixinCompiler, Class<B> baseType, Class<F> factoryClass, String classSuffix) {
+        super(mixinCompiler, baseType, factoryClass, classSuffix);
     }
 
     /**

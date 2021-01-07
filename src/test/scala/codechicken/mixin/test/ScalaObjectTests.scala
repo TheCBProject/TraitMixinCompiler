@@ -14,9 +14,13 @@ class ScalaObjectTests {
     @Test
     def doStuff() {
         val compiler = MixinCompiler.create()
-        val factory = new MixinFactoryImpl[Microblock](compiler, classOf[Microblock], "cmb", classOf[Int])
+        val factory = new MixinFactoryImpl[Microblock, Factory](compiler, classOf[Microblock], classOf[Factory], "cmb")
         factory.registerTrait("codechicken/mixin/CornerMicroblock")
     }
+}
+
+trait Factory {
+    def construct(i:Int):Microblock
 }
 
 

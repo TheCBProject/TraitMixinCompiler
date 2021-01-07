@@ -3,6 +3,7 @@ package codechicken.mixin;
 import codechicken.mixin.api.MixinCompiler;
 import codechicken.mixin.api.MixinFactory;
 import codechicken.mixin.util.ClassInfo;
+import codechicken.mixin.util.FactoryGenerator;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
 import org.objectweb.asm.tree.ClassNode;
@@ -17,26 +18,31 @@ import java.util.stream.Collectors;
 /**
  * Created by covers1624 on 2/17/20.
  */
-public class MixinFactoryImpl<B> implements MixinFactory<B> {
+public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
 
     protected final AtomicInteger counter = new AtomicInteger();
     protected final List<BiConsumer<Class<? extends B>, ImmutableSet<TraitKey>>> compileCallbacks = new ArrayList<>();
     protected final Map<ImmutableSet<TraitKey>, Class<? extends B>> classCache = new HashMap<>();
-    protected final Map<ImmutableSet<TraitKey>, Constructor<? extends B>> constructorCache = new HashMap<>();
+    protected final Map<ImmutableSet<TraitKey>, F> factoryCache = new HashMap<>();
     protected final Map<Class<?>, ImmutableSet<TraitKey>> traitLookup = new HashMap<>();
     protected final Map<String, TraitKey> registeredTraits = new HashMap<>();
 
     protected final MixinCompiler mixinCompiler;
     protected final Class<B> baseType;
+    protected final Class<F> factoryClass;
     protected final String classSuffix;
-    protected final Class<?>[] ctorParamTypes;
 
-    public MixinFactoryImpl(MixinCompiler mixinCompiler, Class<B> baseType, String classSuffix, Class<?>... ctorParamTypes) {
+    protected final FactoryGenerator factoryGenerator;
+
+    public MixinFactoryImpl(MixinCompiler mixinCompiler, Class<B> baseType, Class<F> factoryClass, String classSuffix) {
         this.mixinCompiler = mixinCompiler;
         this.baseType = baseType;
+        this.factoryClass = factoryClass;
         this.classSuffix = classSuffix;
 
-        this.ctorParamTypes = ctorParamTypes;
+        factoryGenerator = new FactoryGenerator(mixinCompiler);
+        //Validate factory.
+        factoryGenerator.findMethod(factoryClass);
     }
 
     @Override
@@ -68,12 +74,8 @@ public class MixinFactoryImpl<B> implements MixinFactory<B> {
     }
 
     @Override
-    public B construct(ImmutableSet<TraitKey> traits, Object... args) {
-        try {
-            return constructorCache.computeIfAbsent(traits, this::compile).newInstance(args);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException("Unable to construct mixin class.", e);
-        }
+    public F construct(ImmutableSet<TraitKey> traits) {
+        return factoryCache.computeIfAbsent(traits, this::compile);
     }
 
     @Override
@@ -90,7 +92,7 @@ public class MixinFactoryImpl<B> implements MixinFactory<B> {
         return info.getName().equals(parentName) || info.getSuperClass().filter(e -> checkParent(parentName, e)).isPresent();
     }
 
-    private synchronized Constructor<? extends B> compile(ImmutableSet<TraitKey> traits) {
+    private synchronized F compile(ImmutableSet<TraitKey> traits) {
         Class<? extends B> clazz = classCache.computeIfAbsent(traits, e -> {
             Set<String> traitNames = traits.stream().map(TraitKey::getTName).collect(ImmutableSet.toImmutableSet());
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);
@@ -98,7 +100,7 @@ public class MixinFactoryImpl<B> implements MixinFactory<B> {
             compileCallbacks.forEach(callback -> callback.accept(compiled, traits));
             return compiled;
         });
-        return Utils.findConstructor(clazz, ctorParamTypes).orElseThrow(RuntimeException::new);
+        return factoryGenerator.generateFactory(clazz, factoryClass);
     }
 
     private String nextName() {

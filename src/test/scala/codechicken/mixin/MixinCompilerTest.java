@@ -11,7 +11,10 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Paths;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,19 +28,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MixinCompilerTest {
 
     private static MixinCompiler compiler;
-    private static MixinFactory<MixinBase> factory;
+    private static MixinFactory<MixinBase, Factory> factory;
 
     @BeforeAll
     public static void setup() {
         System.setProperty("codechicken.mixin.log_level", "INFO");
         compiler = MixinCompiler.create(new MixinBackend.SimpleMixinBackend(), new SimpleDebugger(Paths.get("dumps"), SimpleDebugger.DumpType.BINARY));
-        factory = new MixinFactoryImpl<>(compiler, MixinBase.class, "tests");
+        factory = new MixinFactoryImpl<>(compiler, MixinBase.class, Factory.class, "tests");
     }
 
     @Test
     public void testJavaTrait() {
         MixinFactory.TraitKey key = factory.registerTrait("codechicken/mixin/classes/Mixin1");
-        MixinBase constructed = factory.construct(ImmutableSet.of(key));
+        MixinBase constructed = factory.construct(ImmutableSet.of(key)).construct();
 
         assertTrue(constructed instanceof Mixin1, "MixinBase does not implement Mixin1");
         constructed.setStuff("Hello");
@@ -47,10 +50,14 @@ public class MixinCompilerTest {
     @Test
     public void testScalaTrait() {
         MixinFactory.TraitKey key = factory.registerTrait("codechicken/mixin/classes/Mixin2");
-        MixinBase constructed = factory.construct(ImmutableSet.of(key));
+        MixinBase constructed = factory.construct(ImmutableSet.of(key)).construct();
 
         assertTrue(constructed instanceof Mixin2, "MixinBase does not implement Mixin1");
         constructed.setStuff("Hello");
         assertEquals("Hello, World!", constructed.append(", World!"));
+    }
+
+    public interface Factory {
+        MixinBase construct();
     }
 }

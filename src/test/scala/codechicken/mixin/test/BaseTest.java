@@ -14,10 +14,10 @@ import java.nio.file.Paths;
  */
 public abstract class BaseTest {
 
-    public static <T> MixinFactory<T> setup(Class<T> clazz, String name) {
+    public static <T, F> MixinFactory<T, F> setup(Class<T> clazz, Class<F> fClass, String name) {
         System.setProperty("codechicken.mixin.log_level", "INFO");
         MixinCompiler compiler = MixinCompiler.create(new MixinBackend.SimpleMixinBackend(), new SimpleDebugger(Paths.get("dumps", name), SimpleDebugger.DumpType.BINARY));
-        return new MixinFactoryImpl<>(compiler, clazz, name);
+        return new MixinFactoryImpl<>(compiler, clazz, fClass, name);
     }
 
 }

@@ -10,7 +10,7 @@ import java.util.function.BiConsumer;
  *
  * Created by covers1624 on 2/17/20.
  */
-public interface MixinFactory<B> {
+public interface MixinFactory<B, F> {
 
     /**
      * Gets the associated MixinCompiler for this MixinFactory.
@@ -38,21 +38,19 @@ public interface MixinFactory<B> {
     }
 
     /**
-     * Constructs a new {@link B} instance with the given set of traits applied.
+     * Returns a factory ({@link F}) capable of constructing a new {@link B} with the given set of traits applied.
      *
      * The MixinFactory will cache constructed classes with the given set of traits,
-     * and uses Generated lambda classes to call its constructor, offering incredibly
-     * little performance penalty for construction. (TODO)
+     * subsequent calls with the same traits will not cause a new class to be generated.
      *
      * It should be noted that, {@link ImmutableSet} is explicitly used here,
      * as their hashCode is statically computed, making it favourable for use as a
      * key in a Map.
      *
      * @param traits The traits to apply.
-     * @param args   Constructor arguments for the {@link B} instance constructor.
-     * @return The new instance.
+     * @return The Factory.
      */
-    B construct(ImmutableSet<TraitKey> traits, Object... args);
+    F construct(ImmutableSet<TraitKey> traits);
 
     /**
      * Gets the traits that were used in compiling the given class.
