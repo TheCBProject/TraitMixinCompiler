@@ -295,7 +295,7 @@ public class JavaTraitGenerator {
         StackAnalyser.StackEntry[] args = new StackAnalyser.StackEntry[len];
 
         for (int i = 0; i < len; ++i) {
-            args[len - i - 1] = analyser.peek();
+            args[len - i - 1] = analyser.peek(len - i - 1);
         }
 
         return Arrays.asList(args);
