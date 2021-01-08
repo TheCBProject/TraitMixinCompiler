@@ -5,7 +5,9 @@ package codechicken.mixin.classes;
  */
 public class Mixin1 extends MixinBase {
 
-    private static String wheee = "doot";
+    private static String wheee = ClassWithField.doThing(e -> {
+        System.out.println(e);
+    });
 
     private String stuff;
 
@@ -16,6 +18,7 @@ public class Mixin1 extends MixinBase {
 
     @Override
     public String append(String otherStuff) {
+        System.out.println(wheee);
         ClassWithField classWithField = new ClassWithField();
         System.out.println(classWithField.someField);
         return stuff + otherStuff;

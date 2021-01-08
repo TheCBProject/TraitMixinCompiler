@@ -2,11 +2,11 @@ package codechicken.mixin.util;
 
 import codechicken.asm.*;
 import codechicken.mixin.api.MixinCompiler;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -206,6 +206,21 @@ public class JavaTraitGenerator {
                             insnList.insert(entry.insn, new TypeInsnNode(CHECKCAST, cNode.superName));
                         }
                     }
+                } else if (mInsn.getOpcode() == INVOKESTATIC) {
+                    if (mInsn.owner.equals(cNode.name) && methodSigLookup.get(mInsn.name + mInsn.desc) != null) {
+                        mInsn.owner = mInsn.owner + "$";
+                    }
+                }
+            } else if (insn instanceof InvokeDynamicInsnNode) {
+                InvokeDynamicInsnNode mInsn = (InvokeDynamicInsnNode) insn;
+                Object[] bsmArgs = mInsn.bsmArgs;
+                for (int i = 0; i < bsmArgs.length; i++) {
+                    Object bsmArg = bsmArgs[i];
+                    if (!(bsmArg instanceof Handle)) continue;
+                    Handle handle = (Handle) bsmArg;
+                    if (handle.getOwner().equals(cNode.name) && handle.getTag() == H_INVOKESTATIC) {
+                        bsmArgs[i] = new Handle(handle.getTag(), handle.getOwner() + "$", handle.getName(), handle.getDesc(), handle.isInterface());
+                    }
                 }
             }
 
@@ -235,8 +250,10 @@ public class JavaTraitGenerator {
             staticTransform(mv, mNode);
             return;
         }
-        if (mNode.name.equals("<clinit>")) {
-            MethodNode mv = (MethodNode) sNode.visitMethod(mNode.access, mNode.name, mNode.desc, null, null);
+        if ((mNode.access & ACC_STATIC) != 0) {
+            int mask = ACC_PRIVATE | ACC_PROTECTED;
+            int access = (mNode.access & ~mask) | ACC_PUBLIC;
+            MethodNode mv = (MethodNode) sNode.visitMethod(access, mNode.name, mNode.desc, null, null);
             ASMHelper.copy(mNode, mv);
             staticTransform(mv, mNode);
             return;
@@ -301,7 +318,7 @@ public class JavaTraitGenerator {
         StackAnalyser.StackEntry[] args = new StackAnalyser.StackEntry[len];
 
         for (int i = 0; i < len; ++i) {
-            args[len - i - 1] = analyser.peek(len - i - 1);
+            args[len - i - 1] = analyser.peek(i);
         }
 
         return Arrays.asList(args);
