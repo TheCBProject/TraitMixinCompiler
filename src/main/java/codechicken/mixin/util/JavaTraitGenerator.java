@@ -235,6 +235,12 @@ public class JavaTraitGenerator {
             staticTransform(mv, mNode);
             return;
         }
+        if (mNode.name.equals("<clinit>")) {
+            MethodNode mv = (MethodNode) sNode.visitMethod(mNode.access, mNode.name, mNode.desc, null, null);
+            ASMHelper.copy(mNode, mv);
+            staticTransform(mv, mNode);
+            return;
+        }
         boolean isPrivate = (mNode.access & ACC_PRIVATE) != 0;
         int access = !isPrivate ? ACC_PUBLIC : ACC_PRIVATE;
         if (!isPrivate) {

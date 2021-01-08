@@ -5,6 +5,8 @@ package codechicken.mixin.classes;
  */
 public class Mixin1 extends MixinBase {
 
+    private static String wheee = "doot";
+
     private String stuff;
 
     @Override
