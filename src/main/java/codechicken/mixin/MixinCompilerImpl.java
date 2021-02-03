@@ -212,7 +212,7 @@ public class MixinCompilerImpl implements MixinCompiler {
         byte[] bytes = ASMHelper.createBytes(cNode, COMPUTE_FRAMES | COMPUTE_MAXS);
         long end = System.nanoTime();
         logger.log(LOG_LEVEL, "Generation of {} with [{}] took {}", superClass, String.join(", ", traits), Utils.timeString(start, end));
-        return (Class<T>) defineClass(name, bytes);
+        return defineClass(name, bytes);
     }
 
     @Override

@@ -94,6 +94,7 @@ dependencies {
 
     scalalib 'org.scala-lang:scala-library:2.13.1'
     scalalib 'org.scala-lang:scala-reflect:2.13.1'
+    scalalib 'org.scala-lang:scala-compiler:2.13.1'
     scalasupportImplementation sourceSets.main.output
 }
 

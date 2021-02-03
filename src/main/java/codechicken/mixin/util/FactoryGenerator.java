@@ -89,7 +89,7 @@ public class FactoryGenerator {
         mv.visitCode();
         mv.visitTypeInsn(NEW, asmName(actualClass));
         mv.visitInsn(DUP);
-        int count = 0;
+        int count = 1;
         for (Type param : params) {
             //TODO, this likely needs to account for Boxed <-> Primitive.
             // and should get parameters from the Constructor, inserting CHECKCAST where necessary.
