@@ -9,8 +9,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.objectweb.asm.Opcodes.ACC_ABSTRACT;
-import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * Created by covers1624 on 2/11/20.
@@ -34,6 +33,7 @@ public class ClassNodeInfo extends ClassInfo {
 
     //@formatter:off
     @Override public String getName() { return cNode.name; }
+    @Override public boolean isInterface() { return (cNode.access & ACC_INTERFACE) != 0; }
     @Override public Optional<ClassInfo> getSuperClass() { return Optional.ofNullable(mixinCompiler.getClassInfo(cNode.superName)); }
     @Override public Stream<ClassInfo> getInterfaces() { return interfaces.stream(); }
     @Override public Stream<MethodInfo> getMethods() { return methods.stream(); }

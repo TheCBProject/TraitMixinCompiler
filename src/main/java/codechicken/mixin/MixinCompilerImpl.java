@@ -96,7 +96,13 @@ public class MixinCompilerImpl implements MixinCompiler {
 
     @Override
     public ClassInfo getClassInfo(String name) {
-        return infoCache.computeIfAbsent(name, this::obtainInfo);
+        // Do not compress this down to a computeIfAbsent, obtainInfo can modify the infoCache map.
+        ClassInfo info = infoCache.get(name);
+        if (info == null) {
+            info = obtainInfo(name);
+            infoCache.put(name, info);
+        }
+        return info;
     }
 
     @Override
@@ -129,14 +135,14 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         MethodInfo cInit = baseInfo.getMethods().filter(e -> e.getName().equals("<init>")).findFirst().orElseThrow(IllegalStateException::new);
         MethodNode mInit = (MethodNode) cNode.visitMethod(ACC_PUBLIC, "<init>", cInit.getDesc(), null, null);
-        Utils.writeBridge(mInit, cInit.getDesc(), INVOKESPECIAL, superClass, "<init>", cInit.getDesc());
+        Utils.writeBridge(mInit, cInit.getDesc(), INVOKESPECIAL, superClass, "<init>", cInit.getDesc(), false);
         mInit.instructions.remove(mInit.instructions.getLast());//remove the RETURN from writeBridge
 
         List<MixinInfo> prevInfos = new ArrayList<>();
 
         for (MixinInfo t : mixinInfos) {
             mInit.visitVarInsn(ALOAD, 0);
-            mInit.visitMethodInsn(INVOKESTATIC, t.getName(), "$init$", "(L" + t.getName() + ";)V", false);
+            mInit.visitMethodInsn(INVOKESTATIC, t.getName(), "$init$", "(L" + t.getName() + ";)V", true);
 
             for (FieldMixin f : t.getFields()) {
                 FieldNode fv = (FieldNode) cNode.visitField(ACC_PRIVATE, f.getAccessName(t.getName()), f.getDesc(), null, null);
@@ -170,7 +176,8 @@ public class MixinCompilerImpl implements MixinCompiler {
                 if (prev.isPresent()) {
                     Utils.writeStaticBridge(mv, sName, prev.get());
                 } else {
-                    Utils.writeBridge(mv, sDesc, INVOKESPECIAL, baseInfo.findPublicImpl(sName, sDesc).orElseThrow(IllegalStateException::new).getOwner().getName(), sName, sDesc);
+                    MethodInfo mInfo = baseInfo.findPublicImpl(sName, sDesc).orElseThrow(IllegalStateException::new);
+                    Utils.writeBridge(mv, sDesc, INVOKESPECIAL, mInfo.getOwner().getName(), sName, sDesc, mInfo.getOwner().isInterface());
                 }
 
             }
@@ -204,7 +211,7 @@ public class MixinCompilerImpl implements MixinCompiler {
             allParentMethods.stream().filter(m -> m.getName().equals(sName) && m.getDesc().startsWith(pDesc)).forEach(m -> {
                 if (methodSigs.add(m.getName() + m.getDesc())) {
                     MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC | ACC_SYNTHETIC | ACC_BRIDGE, m.getName(), m.getDesc(), null, m.getExceptions());
-                    Utils.writeBridge(mv, mv.desc, INVOKEVIRTUAL, cNode.name, sName, sDesc);
+                    Utils.writeBridge(mv, mv.desc, INVOKEVIRTUAL, cNode.name, sName, sDesc, (cNode.access & ACC_INTERFACE) != 0);
                 }
             });
         }

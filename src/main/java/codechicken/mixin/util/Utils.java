@@ -122,7 +122,12 @@ public class Utils {
         );
     }
 
+    @Deprecated // This should not be used, specify isInterface explicitly.
     public static void finishBridgeCall(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc) {
+        finishBridgeCall(mv, mvDesc, opcode, owner, name, desc, opcode == INVOKEINTERFACE);
+    }
+
+    public static void finishBridgeCall(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc, boolean isInterface) {
         Type[] args = Type.getArgumentTypes(mvDesc);
         Type returnType = Type.getReturnType(mvDesc);
         int localIndex = 1;
@@ -130,18 +135,23 @@ public class Utils {
             mv.visitVarInsn(arg.getOpcode(ILOAD), localIndex);
             localIndex += StackAnalyser.width(arg);
         }
-        mv.visitMethodInsn(opcode, owner, name, desc, opcode == INVOKEINTERFACE);
+        mv.visitMethodInsn(opcode, owner, name, desc, isInterface);
         mv.visitInsn(returnType.getOpcode(IRETURN));
         mv.visitMaxs(-1, -1);//COMPUTE_FRAMES :)
     }
 
+    @Deprecated // This should not be used, specify isInterface explicitly.
     public static void writeBridge(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc) {
+        writeBridge(mv, mvDesc, opcode, owner, name, desc, opcode == INVOKEINTERFACE);
+    }
+
+    public static void writeBridge(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc, boolean isInterface) {
         mv.visitVarInsn(ALOAD, 0);
-        finishBridgeCall(mv, mvDesc, opcode, owner, name, desc);
+        finishBridgeCall(mv, mvDesc, opcode, owner, name, desc, isInterface);
     }
 
     public static void writeStaticBridge(MethodNode mv, String mName, MixinInfo info) {
-        writeBridge(mv, mv.desc, INVOKESTATIC, info.getName(), mName + "$", staticDesc(info.getName(), mv.desc));
+        writeBridge(mv, mv.desc, INVOKESTATIC, info.getName(), mName + "$", staticDesc(info.getName(), mv.desc), true);
     }
 
     public static boolean isScalaClass(ClassNode node) {

@@ -5,7 +5,6 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -21,22 +20,6 @@ import static org.objectweb.asm.Opcodes.*;
 public class FactoryGenerator {
 
     private static final AtomicInteger COUNTER = new AtomicInteger();
-
-    private static final int[] LOADS = {
-            -1,
-            ILOAD,
-            ILOAD,
-            ILOAD,
-            ILOAD,
-            ILOAD,
-            FLOAD,
-            LLOAD,
-            DLOAD,
-            ALOAD,
-            ALOAD,
-            -1,
-            -1
-    };
 
     private final MixinCompiler compiler;
 
@@ -66,7 +49,7 @@ public class FactoryGenerator {
 
     public <T, F> F generateFactory(Class<T> actualClass, Class<F> factoryClazz) {
         Method factoryMethod = findMethod(factoryClazz);
-        Constructor<T> constructor = Utils.findConstructor(actualClass, factoryMethod.getParameterTypes())
+        Utils.findConstructor(actualClass, factoryMethod.getParameterTypes())
                 .orElseThrow(() -> new IllegalArgumentException("Unable to find constructor for " + actualClass.getName() + " that matches Factory method in " + factoryClazz.getName()));
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
@@ -91,9 +74,7 @@ public class FactoryGenerator {
         mv.visitInsn(DUP);
         int count = 1;
         for (Type param : params) {
-            //TODO, this likely needs to account for Boxed <-> Primitive.
-            // and should get parameters from the Constructor, inserting CHECKCAST where necessary.
-            mv.visitVarInsn(LOADS[param.getSort()], count);
+            mv.visitVarInsn(param.getOpcode(ILOAD), count);
             count += (param.getSort() == Type.DOUBLE || param.getSort() == Type.LONG) ? 2 : 1;
         }
         mv.visitMethodInsn(INVOKESPECIAL, asmName(actualClass), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, params), false);

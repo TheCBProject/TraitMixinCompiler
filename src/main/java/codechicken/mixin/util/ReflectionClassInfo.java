@@ -35,6 +35,7 @@ public class ReflectionClassInfo extends ClassInfo {
 
     //@formatter:off
     @Override public String getName() { return name; }
+    @Override public boolean isInterface() { return clazz.isInterface(); }
     @Override public Optional<ClassInfo> getSuperClass() { return Optional.ofNullable(mixinCompiler.getClassInfo(clazz.getSuperclass())); }
     @Override public Stream<ClassInfo> getInterfaces() { return interfaces.stream(); }
     @Override public Stream<MethodInfo> getMethods() { return methods.stream(); }

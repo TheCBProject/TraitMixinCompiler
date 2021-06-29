@@ -20,6 +20,8 @@ public abstract class ClassInfo {
 
     public abstract String getName();
 
+    public abstract boolean isInterface();
+
     public abstract Optional<ClassInfo> getSuperClass();
 
     public abstract Stream<ClassInfo> getInterfaces();

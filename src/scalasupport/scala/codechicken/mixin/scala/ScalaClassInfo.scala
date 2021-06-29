@@ -20,6 +20,8 @@ case class ScalaClassInfo(mc: MixinCompiler, cNode: ClassNode, sig: ScalaSignatu
         case e => e
     }
 
+    override def isInterface = cSym.isTrait || cSym.isInterface
+
     override def getSuperClass = Optional.ofNullable(mixinCompiler.getClassInfo(cSym.jParent))
 
     def isTrait = cSym.isTrait
