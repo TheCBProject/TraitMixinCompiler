@@ -1,0 +1,42 @@
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+java.withSourcesJar()
+
+archivesBaseName = 'TraitMixinCompiler'
+
+configurations {
+    shadow
+    api.extendsFrom shadow
+}
+
+dependencies {
+    api 'org.apache.logging.log4j:log4j-api:2.17.1'
+
+    api 'net.covers1624:Quack:0.4.3.1'
+
+    api('codechicken:ChickenASM:3.1.0.1') {
+        transitive = false
+    }
+    api 'org.ow2.asm:asm:9.2'
+    api 'org.ow2.asm:asm-tree:9.2'
+    api 'org.ow2.asm:asm-commons:9.2'
+    api 'org.ow2.asm:asm-util:9.2'
+
+    api 'com.google.guava:guava:31.0.1-jre'
+    api 'org.apache.commons:commons-lang3:3.8.1'
+}
+
+jar {
+    manifest {
+        attributes 'FMLModType': 'GAMELIBRARY'
+    }
+}
+
+publishing {
+    publications {
+        publication(MavenPublication) {
+            artifactId archivesBaseName
+
+            from components['java']
+        }
+    }
+}

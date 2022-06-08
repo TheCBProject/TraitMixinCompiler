@@ -1,8 +1,8 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinDebugger;
-import codechicken.repack.org.objectweb.asm.util.Textifier;
-import codechicken.repack.org.objectweb.asm.util.TraceClassVisitor;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceClassVisitor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;

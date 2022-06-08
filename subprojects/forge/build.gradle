@@ -1,0 +1,32 @@
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.withSourcesJar()
+
+archivesBaseName = 'TraitMixinCompiler-forge'
+
+dependencies {
+    api project(":core")
+
+    implementation('codechicken:ChickenASM-modlauncher:3.1.0.1') { transitive false }
+    implementation('cpw.mods:modlauncher:9.0.0') { transitive false }
+    implementation('net.minecraftforge:forgespi:4.0.11') { transitive false }
+    implementation('net.minecraftforge:fmlcore:1.18.2-40.0.19') { transitive false }
+    implementation('net.minecraftforge:fmlloader:1.18.2-40.0.19') { transitive false }
+    implementation('net.minecraftforge:forge:1.18.2-40.0.19:universal') { transitive false }
+}
+
+jar {
+    manifest {
+        attributes 'FMLModType': 'GAMELIBRARY'
+    }
+}
+
+publishing {
+    publications {
+        publication(MavenPublication) {
+            artifactId archivesBaseName
+
+            artifact jar
+            artifact sourcesJar
+        }
+    }
+}

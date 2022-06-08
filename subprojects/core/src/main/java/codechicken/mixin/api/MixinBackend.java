@@ -1,15 +1,16 @@
 package codechicken.mixin.api;
 
 import codechicken.mixin.util.Utils;
-import org.apache.commons.io.IOUtils;
+import net.covers1624.quack.reflect.PrivateLookups;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 
 /**
@@ -72,10 +73,8 @@ public interface MixinBackend {
 
         static {
             try {
-                MethodHandles.Lookup lookup = MethodHandles.lookup();
-                Method m = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
-                m.setAccessible(true);
-                m_defineClass = lookup.unreflect(m);
+                m_defineClass = PrivateLookups.getTrustedLookup()
+                        .findVirtual(ClassLoader.class, "defineClass", MethodType.methodType(Class.class, byte[].class, int.class, int.class));
             } catch (Throwable e) {
                 throw new RuntimeException("Unable to retrieve methods via reflection.", e);
             }
@@ -97,7 +96,13 @@ public interface MixinBackend {
                 if (is == null) {
                     return null;
                 }
-                return IOUtils.toByteArray(is);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buff = new byte[1024];
+                int len;
+                while ((len = is.read(buff)) != -1) {
+                    bos.write(buff, 0, len);
+                }
+                return bos.toByteArray();
             } catch (IOException e) {
                 Utils.throwUnchecked(new ClassNotFoundException("Could not load bytes for '" + name + "'.", e));
                 return null;//never happens.
@@ -108,7 +113,7 @@ public interface MixinBackend {
         @SuppressWarnings ("unchecked")
         public <T> Class<T> defineClass(String name, byte[] bytes) {
             try {
-                return (Class<T>) m_defineClass.invoke(classLoader, bytes, 0, bytes.length);
+                return (Class<T>) m_defineClass.invokeExact(classLoader, bytes, 0, bytes.length);
             } catch (Throwable e) {
                 throw new RuntimeException("Failed to define class '" + name + "'.", e);
             }

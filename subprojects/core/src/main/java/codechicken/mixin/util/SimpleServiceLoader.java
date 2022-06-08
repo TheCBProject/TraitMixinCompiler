@@ -10,7 +10,7 @@ import java.util.ServiceConfigurationError;
 import java.util.Set;
 
 /**
- * Basically a re-implementation of ServiceLoader that does things a little bit differently.
+ * Basically a re-implementation of ServiceLoader that does things a little differently.
  *
  * Services are only class loaded and not instantiated, useful for some applications.
  * {@link #poll()} must be called to actually load stuff, new services found directly

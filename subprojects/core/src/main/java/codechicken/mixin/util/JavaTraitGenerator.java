@@ -182,10 +182,10 @@ public class JavaTraitGenerator {
                         MethodNode target = methodSigLookup.get(mInsn.name + mInsn.desc);
                         if (target != null) {
                             if ((target.access & ACC_PRIVATE) != 0) {
-                                ///call the static impl method
-                                pointer.replace(new MethodInsnNode(INVOKEVIRTUAL, mInsn.owner, mInsn.name, Utils.staticDesc(mInsn.owner, mInsn.desc), true));
+                                // call the static impl method
+                                pointer.replace(new MethodInsnNode(INVOKESTATIC, mInsn.owner, mInsn.name, Utils.staticDesc(mInsn.owner, mInsn.desc), true));
                             } else {
-                                //call the interface method
+                                // call the interface method
                                 pointer.replace(new MethodInsnNode(INVOKEINTERFACE, mInsn.owner, mInsn.name, mInsn.desc, true));
                             }
                         } else {

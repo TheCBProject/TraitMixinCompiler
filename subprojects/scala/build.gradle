@@ -1,0 +1,52 @@
+plugins {
+    id 'scala'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+java.withSourcesJar()
+
+archivesBaseName = 'TraitMixinCompiler-scala'
+
+configurations {
+    scalaReflect
+}
+
+dependencies {
+    api project(":core")
+
+    implementation 'org.scala-lang:scala-library:2.13.1'
+    implementation 'org.scala-lang:scala-reflect:2.13.1'
+    implementation 'org.scala-lang:scala-compiler:2.13.1'
+
+    scalaReflect 'org.scala-lang:scala-reflect:2.13.1'
+}
+
+jar.enabled = false
+shadowJar {
+    build.dependsOn it
+    classifier ''
+    configurations = []
+
+    manifest {
+        attributes 'FMLModType': 'GAMELIBRARY'
+    }
+
+    // ShadowJar is an absolute joke now. I can't include these specific files from scalaReflect
+    from(project.configurations.scalaReflect.collect { zipTree(it) }) {
+        include "scala/reflect/internal/pickling/ByteCodecs*.class"
+    }
+
+    relocate 'scala.reflect.internal.pickling', 'codechicken.repack.scala.reflect.internal.pickling'
+}
+
+publishing {
+    publications {
+        publication(MavenPublication) {
+            artifactId archivesBaseName
+
+            artifact shadowJar
+            artifact sourcesJar
+        }
+    }
+}

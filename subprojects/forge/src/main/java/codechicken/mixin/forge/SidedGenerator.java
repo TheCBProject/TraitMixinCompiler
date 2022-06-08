@@ -85,11 +85,10 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
     public ImmutableSet<TraitKey> getTraitsForObject(T thing, boolean client) {
         return getObjectTraitCache(client).computeIfAbsent(thing.getClass(), clazz -> {
             Map<String, TraitKey> traits = getTraitMap(client);
-            return hierarchy(clazz)//
-                    //.parallel()// TODO, maybe?
-                    .map(Utils::asmName)//
-                    .map(traits::get)//
-                    .filter(Objects::nonNull)//
+            return hierarchy(clazz)
+                    .map(Utils::asmName)
+                    .map(traits::get)
+                    .filter(Objects::nonNull)
                     .collect(ImmutableSet.toImmutableSet());
         });
     }
@@ -97,23 +96,23 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
     protected void loadAnnotations(Class<? extends Annotation> aClass, Class<? extends Annotation> aListClass) {
         Type aType = Type.getType(aClass);
         Type lType = Type.getType(aListClass);
-        ModList.get().getAllScanData().stream()//
-                .map(ModFileScanData::getAnnotations)//
-                .flatMap(Collection::stream)//
-                .filter(a -> a.getAnnotationType().equals(aType) || a.getAnnotationType().equals(lType))//
-                .filter(a -> a.getTargetType() == ElementType.TYPE)//
+        ModList.get().getAllScanData().stream()
+                .map(ModFileScanData::getAnnotations)
+                .flatMap(Collection::stream)
+                .filter(a -> a.annotationType().equals(aType) || a.annotationType().equals(lType))
+                .filter(a -> a.targetType() == ElementType.TYPE)
                 .map(a -> {
-                    if (a.getAnnotationType().equals(lType)) {
+                    if (a.annotationType().equals(lType)) {
                         @SuppressWarnings ("unchecked")
-                        List<Map<String, Object>> entries = ((List<Map<String, Object>>) a.getAnnotationData().get("value"));
+                        List<Map<String, Object>> entries = ((List<Map<String, Object>>) a.annotationData().get("value"));
                         return Pair.of(a, entries);
                     }
-                    return Pair.of(a, Collections.singletonList(a.getAnnotationData()));
-                })//
+                    return Pair.of(a, Collections.singletonList(a.annotationData()));
+                })
                 .forEach(p -> {
                     ModFileScanData.AnnotationData a = p.getLeft();
                     List<Map<String, Object>> dataList = p.getRight();
-                    String tName = a.getClassType().getInternalName();
+                    String tName = a.clazz().getInternalName();
                     logger.info("Trait: {}", tName);
                     for (Map<String, Object> data : dataList) {
                         Type marker = (Type) data.get("value");
@@ -133,10 +132,10 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
     }
 
     protected Stream<Class<?>> hierarchy(Class<?> clazz) {
-        return Streams.concat(//
-                Stream.of(clazz),//
-                Arrays.stream(clazz.getInterfaces()).flatMap(this::hierarchy),//
-                Streams.stream(Optional.ofNullable(clazz.getSuperclass())).flatMap(this::hierarchy)//
+        return Streams.concat(
+                Stream.of(clazz),
+                Arrays.stream(clazz.getInterfaces()).flatMap(this::hierarchy),
+                Streams.stream(Optional.ofNullable(clazz.getSuperclass())).flatMap(this::hierarchy)
         );
     }
 
