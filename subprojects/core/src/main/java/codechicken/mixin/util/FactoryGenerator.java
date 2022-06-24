@@ -55,7 +55,7 @@ public class FactoryGenerator {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         MethodVisitor mv;
 
-        String cName = actualClass.getName() + "$$Ctor$$" + COUNTER.getAndIncrement();
+        String cName = actualClass.getName().replace('.', '/') + "$$Ctor$$" + COUNTER.getAndIncrement();
         cw.visit(V1_8, ACC_PUBLIC | ACC_SUPER | ACC_FINAL | ACC_SYNTHETIC, cName, null, asmName(Object.class), new String[] { asmName(factoryClazz) });
 
         mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
