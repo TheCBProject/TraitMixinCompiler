@@ -6,7 +6,7 @@ archivesBaseName = 'TraitMixinCompiler-forge'
 dependencies {
     api project(":core")
 
-    implementation('codechicken:ChickenASM-modlauncher:3.1.0.1') { transitive false }
+    implementation('codechicken:ChickenASM-modlauncher:3.1.0.15') { transitive false }
     implementation('cpw.mods:modlauncher:9.0.0') { transitive false }
     implementation('net.minecraftforge:forgespi:4.0.11') { transitive false }
     implementation('net.minecraftforge:fmlcore:1.18.2-40.0.19') { transitive false }
