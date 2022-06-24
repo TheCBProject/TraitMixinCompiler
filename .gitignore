@@ -16,5 +16,4 @@
 !.gitignore
 
 # Include Important Folders
-!src/
 !subprojects/
