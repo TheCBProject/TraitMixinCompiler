@@ -1,0 +1,9 @@
+rootProject.name = 'TraitMixinCompiler'
+
+include 'core'
+include 'forge'
+include 'scala'
+
+rootProject.children.each {
+    it.projectDir = file("subprojects/${it.name}")
+}
