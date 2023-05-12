@@ -7,7 +7,9 @@ import codechicken.mixin.api.MixinCompiler;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.moddiscovery.ModAnnotation;
 import net.minecraftforge.forgespi.language.ModFileScanData;
 import org.apache.commons.lang3.tuple.Pair;
@@ -119,13 +121,11 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
                         ModAnnotation.EnumHolder holder = (ModAnnotation.EnumHolder) data.get("side");
                         TraitSide side = holder != null ? TraitSide.valueOf(holder.getValue()) : TraitSide.COMMON;
                         logger.info("    Marker: {}, Side: {}", marker.getInternalName(), side);
-                        if (side.isSupported()) {
-                            if (side.isCommon() || side.isClient()) {
-                                registerSide(clientTraits, marker.getInternalName(), tName);
-                            }
-                            if (side.isCommon() || side.isServer()) {
-                                registerSide(serverTraits, marker.getInternalName(), tName);
-                            }
+                        if (side.isCommon() || side.isClient() && FMLEnvironment.dist == Dist.CLIENT) {
+                            registerSide(clientTraits, marker.getInternalName(), tName);
+                        }
+                        if (side.isCommon() || side.isServer()) {
+                            registerSide(serverTraits, marker.getInternalName(), tName);
                         }
                     }
                 });
