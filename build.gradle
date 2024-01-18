@@ -9,6 +9,13 @@ subprojects { subProject ->
     apply plugin: 'java-library'
     apply plugin: 'maven-publish'
 
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
+        }
+        withSourcesJar()
+    }
+
     repositories {
         mavenLocal()
         jcenter()
@@ -17,6 +24,10 @@ subprojects { subProject ->
         maven { url "https://maven.minecraftforge.net/" }
     }
 
+    dependencies {
+        compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+        compileOnly 'org.jetbrains:annotations:22.0.0'
+    }
 
     publishing {
         repositories {

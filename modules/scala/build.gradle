@@ -25,7 +25,7 @@ dependencies {
 jar.enabled = false
 shadowJar {
     build.dependsOn it
-    classifier ''
+    archiveClassifier = ''
     configurations = []
 
     manifest {
