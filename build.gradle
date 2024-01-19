@@ -11,16 +11,15 @@ subprojects { subProject ->
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(8)
+            languageVersion = JavaLanguageVersion.of(17)
         }
         withSourcesJar()
     }
 
     repositories {
         mavenLocal()
-        jcenter()
         mavenCentral()
-        maven { url "https://chickenbones.net/maven" }
+        maven { url "https://maven.covers1624.net/" }
         maven { url "https://maven.minecraftforge.net/" }
     }
 

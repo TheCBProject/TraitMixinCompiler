@@ -1,0 +1,49 @@
+package codechicken.mixin.scala;
+
+import codechicken.mixin.api.MixinCompiler;
+import codechicken.mixin.util.ClassInfo;
+import codechicken.mixin.util.ClassNodeInfo;
+import net.covers1624.quack.collection.FastStream;
+import org.objectweb.asm.tree.ClassNode;
+
+import java.util.Optional;
+
+/**
+ * Created by covers1624 on 19/1/24.
+ */
+public class ScalaClassInfo extends ClassNodeInfo {
+
+    public final ScalaSignature sig;
+    public final ScalaSignature.ClassSymbolRef cSym;
+
+    public ScalaClassInfo(MixinCompiler mixinCompiler, ClassNode cNode, ScalaSignature sig, ScalaSignature.ClassSymbolRef cSym) {
+        super(mixinCompiler, cNode);
+        this.sig = sig;
+        this.cSym = cSym;
+        interfaces = FastStream.of(cSym.jInterfaces()).map(mixinCompiler::getClassInfo).toList();
+    }
+
+    @Override
+    public Optional<ClassInfo> concreteParent() {
+        ClassInfo i = getSuperClass().orElse(null);
+        return i instanceof ScalaClassInfo info && info.isTrait() ? info.concreteParent() : Optional.ofNullable(i);
+    }
+
+    @Override
+    public boolean isInterface() {
+        return cSym.isTrait() || cSym.isInterface();
+    }
+
+    @Override
+    public Optional<ClassInfo> getSuperClass() {
+        return Optional.ofNullable(mixinCompiler.getClassInfo(cSym.jParent()));
+    }
+
+    public boolean isTrait() {
+        return cSym.isTrait();
+    }
+
+    public boolean isObject() {
+        return cSym.isObject();
+    }
+}
