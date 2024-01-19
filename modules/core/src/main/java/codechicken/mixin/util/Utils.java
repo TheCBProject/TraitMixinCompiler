@@ -1,12 +1,14 @@
 package codechicken.mixin.util;
 
 import codechicken.asm.StackAnalyser;
-import com.google.common.collect.Streams;
+import net.covers1624.quack.collection.ColUtils;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
@@ -48,11 +50,11 @@ public class Utils {
         };
     }
 
-    public static <T> Optional<Constructor<T>> findConstructor(Class<T> clazz, Class<?>... parameters) {
+    public static <T> @Nullable Constructor<T> findConstructor(Class<T> clazz, Class<?>... parameters) {
         try {
-            return Optional.of(clazz.getConstructor(parameters));
+            return clazz.getConstructor(parameters);
         } catch (NoSuchMethodException e) {
-            return Optional.empty();
+            return null;
         }
     }
 
@@ -62,10 +64,6 @@ public class Utils {
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException("Failed to instantiate class.", e);
         }
-    }
-
-    public static <T> Stream<T> of(T thing) {
-        return thing != null ? Stream.of(thing) : Stream.empty();
     }
 
     public static <T> List<T> of(T first, List<T> rest) {
@@ -111,15 +109,13 @@ public class Utils {
 
     }
 
-    @SuppressWarnings ("UnstableApiUsage")
-    public static Stream<ClassInfo> allParents(ClassInfo info) {
-        return Streams.concat(//
-                of(info),//
-                Streams.concat(//
-                        Streams.stream(info.getSuperClass()),//
-                        info.getInterfaces()//
-                ).flatMap(Utils::allParents)//
-        );
+    public static FastStream<ClassInfo> allParents(ClassInfo info) {
+        return FastStream.concat(
+                        FastStream.of(info),
+                        FastStream.ofNullable(info.getSuperClass()),
+                        info.getInterfaces()
+                )
+                .flatMap(Utils::allParents);
     }
 
     @Deprecated // This should not be used, specify isInterface explicitly.
@@ -155,8 +151,7 @@ public class Utils {
     }
 
     public static boolean isScalaClass(ClassNode node) {
-        return node.visibleAnnotations.stream()//
-                .anyMatch(e -> e.desc.equals("Lscala/reflect/ScalaSignature;"));
+        return ColUtils.anyMatch(node.visibleAnnotations, e -> e.desc.equals("Lscala/reflect/ScalaSignature;"));
     }
 
     /**

@@ -16,10 +16,9 @@ import org.objectweb.asm.tree.MethodNode;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
-import static codechicken.mixin.api.MixinLanguageSupport.*;
+import static codechicken.mixin.api.MixinLanguageSupport.LanguageName;
 import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 
@@ -38,8 +37,8 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
     }
 
     @Override
-    public Optional<ClassInfo> obtainInfo(String name, @Nullable ClassNode cNode) {
-        if (cNode == null) return Optional.empty();
+    public ClassInfo obtainInfo(String name, @Nullable ClassNode cNode) {
+        if (cNode == null) return null;
 
         if (cNode.name.endsWith("$")) {
             String baseName = cNode.name.substring(0, cNode.name.length() - 1);
@@ -47,12 +46,12 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
             if (baseNode != null) {
                 ScalaClassInfo info = scalaInfo(baseNode, true);
                 if (info != null) {
-                    return Optional.of(info);
+                    return info;
                 }
             }
         }
 
-        return Optional.ofNullable(scalaInfo(cNode, false));
+        return scalaInfo(cNode, false);
     }
 
     private ScalaClassInfo scalaInfo(ClassNode cNode, boolean obj) {
@@ -67,8 +66,8 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
     }
 
     @Override
-    public Optional<MixinInfo> buildMixinTrait(ClassNode cNode) {
-        if (!(mixinCompiler.getClassInfo(cNode) instanceof ScalaClassInfo info) || !info.isTrait()) return Optional.empty();
+    public MixinInfo buildMixinTrait(ClassNode cNode) {
+        if (!(mixinCompiler.getClassInfo(cNode) instanceof ScalaClassInfo info) || !info.isTrait()) return null;
 
         ScalaSignature sig = info.sig;
         Set<String> filtered = listFiltered(sig);
@@ -109,7 +108,7 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
             }
         }
 
-        return Optional.of(new MixinInfo(cNode.name, cSym.jParent(), parentTraits, fields, methods, supers));
+        return new MixinInfo(cNode.name, cSym.jParent(), parentTraits, fields, methods, supers);
     }
 
     private List<MixinInfo> getAndRegisterParentTraits(ClassNode cNode) {

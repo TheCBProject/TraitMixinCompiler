@@ -1,13 +1,11 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinCompiler;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -23,20 +21,20 @@ public class ClassNodeInfo extends ClassInfo {
     public ClassNodeInfo(MixinCompiler mixinCompiler, ClassNode cNode) {
         super(mixinCompiler);
         this.cNode = cNode;
-        interfaces = cNode.interfaces.stream()//
-                .map(mixinCompiler::getClassInfo)//
-                .collect(Collectors.toList());
-        methods = cNode.methods.stream()//
-                .map(MethodNodeInfo::new)//
-                .collect(Collectors.toList());
+        interfaces = FastStream.of(cNode.interfaces)
+                .map(mixinCompiler::getClassInfo)
+                .toList();
+        methods = FastStream.of(cNode.methods)
+                .map(MethodNodeInfo::new)
+                .toList(FastStream.infer());
     }
 
     //@formatter:off
     @Override public String getName() { return cNode.name; }
     @Override public boolean isInterface() { return (cNode.access & ACC_INTERFACE) != 0; }
-    @Override public Optional<ClassInfo> getSuperClass() { return Optional.ofNullable(mixinCompiler.getClassInfo(cNode.superName)); }
-    @Override public Stream<ClassInfo> getInterfaces() { return interfaces.stream(); }
-    @Override public Stream<MethodInfo> getMethods() { return methods.stream(); }
+    @Override public ClassInfo getSuperClass() { return mixinCompiler.getClassInfo(cNode.superName); }
+    @Override public Iterable<ClassInfo> getInterfaces() { return interfaces; }
+    @Override public Iterable<MethodInfo> getMethods() { return methods; }
     public ClassNode getCNode() { return cNode; }
     //@formatter:on
 

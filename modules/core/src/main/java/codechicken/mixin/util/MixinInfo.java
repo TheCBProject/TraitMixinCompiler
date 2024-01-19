@@ -1,10 +1,9 @@
 package codechicken.mixin.util;
 
-import com.google.common.collect.Streams;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Created by covers1624 on 2/11/20.
@@ -28,12 +27,11 @@ public class MixinInfo {
         this.supers = supers;
     }
 
-    public Stream<MixinInfo> linearize() {
-        return Streams.concat(//
-                parentTraits.stream().flatMap(MixinInfo::linearize),//
-                Stream.of(this)//
+    public FastStream<MixinInfo> linearize() {
+        return FastStream.concat(
+                FastStream.of(parentTraits).flatMap(MixinInfo::linearize),
+                FastStream.of(this)
         );
-
     }
 
     public String getName() {

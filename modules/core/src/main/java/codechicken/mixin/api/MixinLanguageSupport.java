@@ -9,7 +9,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.function.BiFunction;
 
@@ -38,7 +37,8 @@ public interface MixinLanguageSupport {
      * @param cNode The ClassNode.
      * @return The ClassInfo.
      */
-    Optional<ClassInfo> obtainInfo(String name, @Nullable ClassNode cNode);
+    @Nullable
+    ClassInfo obtainInfo(String name, @Nullable ClassNode cNode);
 
     /**
      * Tries to build a {@link MixinInfo} for the given {@link ClassNode}.
@@ -50,7 +50,8 @@ public interface MixinLanguageSupport {
      * @param cNode The ClassNode.
      * @return The MixinInfo.
      */
-    Optional<MixinInfo> buildMixinTrait(ClassNode cNode);
+    @Nullable
+    MixinInfo buildMixinTrait(ClassNode cNode);
 
     /**
      * The name for the MixinLanguageSupport, Required.
@@ -94,27 +95,26 @@ public interface MixinLanguageSupport {
         }
 
         @Override
-        public Optional<ClassInfo> obtainInfo(String name, ClassNode cNode) {
-            if (cNode != null) {
-                return Optional.of(new ClassNodeInfo(mixinCompiler, cNode));
-            }
+        public ClassInfo obtainInfo(String name, ClassNode cNode) {
+            if (cNode != null) return new ClassNodeInfo(mixinCompiler, cNode);
+
             Class<?> clazz = mixinCompiler.getMixinBackend().loadClass(name.replace("/", "."));
-            if (clazz != null) {
-                return Optional.of(new ReflectionClassInfo(mixinCompiler, clazz));
-            }
-            return Optional.empty();
+            if (clazz != null) return new ReflectionClassInfo(mixinCompiler, clazz);
+
+            return null;
         }
 
         @Override
-        public Optional<MixinInfo> buildMixinTrait(ClassNode cNode) {
+        public MixinInfo buildMixinTrait(ClassNode cNode) {
             JavaTraitGenerator generator = traitGeneratorFactory.apply(mixinCompiler, cNode);
-            generator.getStaticNode().ifPresent(node -> {
-                mixinCompiler.defineClass(node.name, ASMHelper.createBytes(node, COMPUTE_FRAMES | COMPUTE_MAXS));
-            });
+            ClassNode sNode = generator.getStaticNode();
+            if (sNode != null) {
+                mixinCompiler.defineClass(sNode.name, ASMHelper.createBytes(sNode, COMPUTE_FRAMES | COMPUTE_MAXS));
+            }
             ClassNode tNode = generator.getTraitNode();
             MixinInfo info = generator.getMixinInfo();
             mixinCompiler.defineClass(tNode.name, ASMHelper.createBytes(tNode, COMPUTE_FRAMES | COMPUTE_MAXS));
-            return Optional.of(info);
+            return info;
         }
     }
 

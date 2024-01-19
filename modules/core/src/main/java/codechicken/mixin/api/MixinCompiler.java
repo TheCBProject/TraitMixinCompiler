@@ -9,7 +9,6 @@ import org.objectweb.asm.tree.ClassNode;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -73,12 +72,12 @@ public interface MixinCompiler {
     MixinBackend getMixinBackend();
 
     /**
-     * Attempts to find a {@link MixinLanguageSupport} with the given name.
+     * Get a {@link MixinLanguageSupport} instance with the given name.
      *
      * @param name The name.
-     * @return The MixinLanguageSupport instance.
+     * @return The {@link MixinLanguageSupport} instance or {@code null}
      */
-    <T extends MixinLanguageSupport> Optional<T> findLanguageSupport(String name);
+    <T extends MixinLanguageSupport> T getLanguageSupport(String name);
 
     /**
      * Gets a {@link ClassInfo} instance for the given class name.

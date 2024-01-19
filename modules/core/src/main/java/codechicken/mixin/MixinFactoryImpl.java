@@ -6,14 +6,12 @@ import codechicken.mixin.util.ClassInfo;
 import codechicken.mixin.util.FactoryGenerator;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 /**
  * Created by covers1624 on 2/17/20.
@@ -62,7 +60,7 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
         }
         ClassInfo info = mixinCompiler.getClassInfo(cNode);
 
-        String parentName = info.concreteParent().orElseThrow(RuntimeException::new).getName();
+        String parentName = info.concreteParent().getName();
         ClassInfo baseInfo = mixinCompiler.getClassInfo(baseType);
         if (!checkParent(parentName, baseInfo)) {
             throw new IllegalArgumentException("Trait '" + tName + "' with resolved parent '" + parentName + "' does not extend base type '" + Utils.asmName(baseType) + "'");
@@ -89,12 +87,17 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
     }
 
     private boolean checkParent(String parentName, ClassInfo info) {
-        return info.getName().equals(parentName) || info.getSuperClass().filter(e -> checkParent(parentName, e)).isPresent();
+        if (info.getName().equals(parentName)) return true;
+
+        ClassInfo sClass = info.getSuperClass();
+        if (sClass == null) return false;
+
+        return checkParent(parentName, sClass);
     }
 
     private synchronized F compile(ImmutableSet<TraitKey> traits) {
         Class<? extends B> clazz = classCache.computeIfAbsent(traits, e -> {
-            Set<String> traitNames = traits.stream().map(TraitKey::getTName).collect(ImmutableSet.toImmutableSet());
+            Set<String> traitNames = FastStream.of(traits).map(TraitKey::getTName).toImmutableSet();
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);
             traitLookup.put(compiled, traits);
             compileCallbacks.forEach(callback -> callback.accept(compiled, traits));

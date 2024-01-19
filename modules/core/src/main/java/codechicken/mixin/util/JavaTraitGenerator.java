@@ -2,14 +2,16 @@ package codechicken.mixin.util;
 
 import codechicken.asm.*;
 import codechicken.mixin.api.MixinCompiler;
+import net.covers1624.quack.collection.ColUtils;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -54,16 +56,16 @@ public class JavaTraitGenerator {
             }
             throw new IllegalArgumentException("Cannot register java interface '" + cNode.name + "' as a mixin trait.");
         }
-        if (!cNode.innerClasses.isEmpty() && cNode.innerClasses.stream().noneMatch(this::checkInner)) {
+        if (!cNode.innerClasses.isEmpty() && !ColUtils.anyMatch(cNode.innerClasses, this::checkInner)) {
             throw new IllegalArgumentException("Found illegal inner class for '" + cNode.name + "', use scala.");
         }
-        List<FieldNode> invalidFields = cNode.fields.stream()
+        List<FieldNode> invalidFields = FastStream.of(cNode.fields)
                 .filter(e -> (e.access & ACC_PRIVATE) == 0)
-                .collect(Collectors.toList());
+                .toList();
         if (!invalidFields.isEmpty()) {
-            String fields = invalidFields.stream()
+            String fields = "[" + FastStream.of(invalidFields)
                     .map(e -> e.name)
-                    .collect(Collectors.joining(", ", "[", "]"));
+                    .join(", ") + "]";
             throw new IllegalArgumentException("Illegal fields " + fields + " found in " + cNode.name + ". These fields must be private.");
         }
 
@@ -75,23 +77,23 @@ public class JavaTraitGenerator {
     protected void operate() {
         preProcessTrait();
 
-        staticFields = cNode.fields.stream()
+        staticFields = FastStream.of(cNode.fields)
                 .filter(e -> (e.access & ACC_STATIC) != 0)
-                .collect(Collectors.toList());
+                .toList();
 
-        instanceFields = cNode.fields.stream()
+        instanceFields = FastStream.of(cNode.fields)
                 .filter(e -> (e.access & ACC_STATIC) == 0)
-                .collect(Collectors.toList());
+                .toList();
 
-        traitFields = instanceFields.stream()
+        traitFields = FastStream.of(instanceFields)
                 .map(f -> new FieldMixin(f.name, f.desc, f.access))
-                .collect(Collectors.toList());
+                .toList();
 
-        fieldNameLookup = traitFields.stream()
-                .collect(Collectors.toMap(FieldMixin::getName, e -> e.getAccessName(cNode.name)));
+        fieldNameLookup = FastStream.of(traitFields)
+                .toMap(FieldMixin::getName, e -> e.getAccessName(cNode.name));
 
-        methodSigLookup = cNode.methods.stream()
-                .collect(Collectors.toMap(e -> e.name + e.desc, Function.identity()));
+        methodSigLookup = FastStream.of(cNode.methods)
+                .toMap(e -> e.name + e.desc, Function.identity());
 
         beforeTransform();
 
@@ -125,11 +127,11 @@ public class JavaTraitGenerator {
     protected void postProcessTrait() {
     }
 
-    public Optional<ClassNode> getStaticNode() {
+    public ClassNode getStaticNode() {
         if (sNode.methods.isEmpty() && sNode.fields.isEmpty()) {
-            return Optional.empty();//Pointless.
+            return null; // Pointless.
         }
-        return Optional.of(sNode);
+        return sNode;
     }
 
     public ClassNode getTraitNode() {
@@ -147,8 +149,7 @@ public class JavaTraitGenerator {
 
         AbstractInsnNode insn;
         while ((insn = pointer.get()) != null) {
-            if (insn instanceof FieldInsnNode) {
-                FieldInsnNode fInsn = (FieldInsnNode) insn;
+            if (insn instanceof FieldInsnNode fInsn) {
                 if (fInsn.owner.equals(cNode.name)) {
                     if (insn.getOpcode() == GETFIELD) {
                         pointer.replace(new MethodInsnNode(INVOKEINTERFACE, cNode.name, fieldNameLookup.get(fInsn.name), "()" + fInsn.desc, true));
@@ -161,8 +162,8 @@ public class JavaTraitGenerator {
             } else if (insn instanceof MethodInsnNode) {
                 MethodInsnNode mInsn = (MethodInsnNode) insn;
                 if (mInsn.getOpcode() == INVOKESPECIAL) {
-                    Optional<MethodInfo> optMethod = getSuper(mInsn, stack);
-                    if (optMethod.isPresent()) {
+                    MethodInfo sMethod = getSuper(mInsn, stack);
+                    if (sMethod != null) {
                         String bridgeName = cNode.name.replace("/", "$") + "$$super$" + mInsn.name;
                         if (supers.add(mInsn.name + mInsn.desc)) {
                             tNode.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, bridgeName, mInsn.desc, null, null);
@@ -216,8 +217,7 @@ public class JavaTraitGenerator {
                 Object[] bsmArgs = mInsn.bsmArgs;
                 for (int i = 0; i < bsmArgs.length; i++) {
                     Object bsmArg = bsmArgs[i];
-                    if (!(bsmArg instanceof Handle)) continue;
-                    Handle handle = (Handle) bsmArg;
+                    if (!(bsmArg instanceof Handle handle)) continue;
                     if (handle.getOwner().equals(cNode.name) && handle.getTag() == H_INVOKESTATIC) {
                         bsmArgs[i] = new Handle(handle.getTag(), handle.getOwner() + "$", handle.getName(), handle.getDesc(), handle.isInterface());
                     }
@@ -268,27 +268,27 @@ public class JavaTraitGenerator {
         staticTransform(mv, mNode);
     }
 
-    private Optional<MethodInfo> getSuper(MethodInsnNode mInsn, StackAnalyser stack) {
+    private @Nullable MethodInfo getSuper(MethodInsnNode mInsn, StackAnalyser stack) {
         if (mInsn.owner.equals(stack.owner.getInternalName())) {
-            return Optional.empty();//not a super call
+            return null;//not a super call
         }
 
         //super calls are either to methods with the same name or contain a pattern 'target$$super$name' from the scala compiler
         String methodName = stack.mNode.name.replaceAll(".+\\Q$$super$\\E", "");
         if (!mInsn.name.equals(methodName)) {
-            return Optional.empty();
+            return null;
         }
 
         StackAnalyser.StackEntry entry = stack.peek(Type.getType(mInsn.desc).getArgumentTypes().length);
-        if (!(entry instanceof StackAnalyser.Load)) {
-            return Optional.empty();
+        if (!(entry instanceof StackAnalyser.Load load)) {
+            return null;
         }
-        StackAnalyser.Load load = (StackAnalyser.Load) entry;
         if (!(load.e instanceof StackAnalyser.This)) {
-            return Optional.empty();
+            return null;
         }
 
-        return mixinCompiler.getClassInfo(stack.owner.getInternalName()).findPublicParentImpl(methodName, mInsn.desc);
+        return mixinCompiler.getClassInfo(stack.owner.getInternalName())
+                .findPublicParentImpl(methodName, mInsn.desc);
     }
 
     private MethodNode staticClone(MethodNode mNode, String name, int access) {

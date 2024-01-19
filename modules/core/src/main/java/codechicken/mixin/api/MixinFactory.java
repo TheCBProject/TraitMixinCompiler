@@ -7,7 +7,7 @@ import java.util.function.BiConsumer;
 
 /**
  * Represents a 'user' facing interface for interacting and caching the {@link MixinCompiler}.
- *
+ * <p>
  * Created by covers1624 on 2/17/20.
  */
 public interface MixinFactory<B, F> {
@@ -39,10 +39,10 @@ public interface MixinFactory<B, F> {
 
     /**
      * Returns a factory ({@link F}) capable of constructing a new {@link B} with the given set of traits applied.
-     *
+     * <p>
      * The MixinFactory will cache constructed classes with the given set of traits,
      * subsequent calls with the same traits will not cause a new class to be generated.
-     *
+     * <p>
      * It should be noted that, {@link ImmutableSet} is explicitly used here,
      * as their hashCode is statically computed, making it favourable for use as a
      * key in a Map.

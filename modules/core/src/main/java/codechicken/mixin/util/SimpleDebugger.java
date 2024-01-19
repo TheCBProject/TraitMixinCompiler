@@ -1,12 +1,12 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinDebugger;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceClassVisitor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceClassVisitor;
 
 import java.io.BufferedWriter;
 import java.io.IOException;

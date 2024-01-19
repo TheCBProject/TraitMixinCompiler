@@ -64,7 +64,9 @@ public class ByteCodecs {
         return j;
     }
 
-    /** Returns a new array */
+    /**
+     * Returns a new array
+     */
     public static byte[] encode8to7(byte[] src) {
         int srclen = src.length;
         int dstlen = (srclen * 8 + 6) / 7;
@@ -139,7 +141,9 @@ public class ByteCodecs {
         return dst;
     }
 
-    /** In-place */
+    /**
+     * In-place
+     */
     public static int decode7to8(byte[] src, int srclen) {
         int i = 0;
         int j = 0;

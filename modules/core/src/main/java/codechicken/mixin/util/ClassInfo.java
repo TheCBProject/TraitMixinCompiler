@@ -1,15 +1,13 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinCompiler;
-import com.google.common.collect.Streams;
+import net.covers1624.quack.collection.FastStream;
 
-import java.util.Optional;
-import java.util.stream.Stream;
+import javax.annotation.Nullable;
 
 /**
  * Created by covers1624 on 2/11/20.
  */
-@SuppressWarnings ("UnstableApiUsage")
 public abstract class ClassInfo {
 
     protected MixinCompiler mixinCompiler;
@@ -22,45 +20,44 @@ public abstract class ClassInfo {
 
     public abstract boolean isInterface();
 
-    public abstract Optional<ClassInfo> getSuperClass();
+    public abstract @Nullable ClassInfo getSuperClass();
 
-    public abstract Stream<ClassInfo> getInterfaces();
+    public abstract Iterable<ClassInfo> getInterfaces();
 
-    public abstract Stream<MethodInfo> getMethods();
+    public abstract Iterable<MethodInfo> getMethods();
 
-    public Stream<MethodInfo> getParentMethods() {
-        return Streams.concat(//
-                Streams.stream(getSuperClass()),//
-                getInterfaces()//
-        ).flatMap(ClassInfo::getAllMethods);
+    public FastStream<MethodInfo> getParentMethods() {
+        return FastStream.ofNullable(getSuperClass())
+                .concat(getInterfaces())
+                .flatMap(ClassInfo::getAllMethods);
     }
 
-    public Stream<MethodInfo> getAllMethods() {
-        return Streams.concat(getMethods(), getParentMethods());
+    public FastStream<MethodInfo> getAllMethods() {
+        return FastStream.concat(getMethods(), getParentMethods());
     }
 
-    public Optional<MethodInfo> findPublicImpl(String name, String desc) {
-        return getAllMethods()//
-                .filter(m -> m.getName().equals(name))//
-                .filter(m -> m.getDesc().equals(desc))//
-                .filter(m -> !m.isAbstract() && !m.isPrivate())//
-                .findFirst();
+    public @Nullable MethodInfo findPublicImpl(String name, String desc) {
+        return getAllMethods()
+                .filter(m -> m.getName().equals(name))
+                .filter(m -> m.getDesc().equals(desc))
+                .filter(m -> !m.isAbstract() && !m.isPrivate())
+                .firstOrDefault();
     }
 
-    public Optional<MethodInfo> findPublicParentImpl(String name, String desc) {
-        return getParentMethods()//
-                .filter(m -> m.getName().equals(name))//
-                .filter(m -> m.getDesc().equals(desc))//
-                .filter(m -> !m.isAbstract() && !m.isPrivate())//
-                .findFirst();
+    public @Nullable MethodInfo findPublicParentImpl(String name, String desc) {
+        return getParentMethods()
+                .filter(m -> m.getName().equals(name))
+                .filter(m -> m.getDesc().equals(desc))
+                .filter(m -> !m.isAbstract() && !m.isPrivate())
+                .firstOrDefault();
     }
 
-    public Optional<ClassInfo> concreteParent() {
+    public @Nullable ClassInfo concreteParent() {
         return getSuperClass();
     }
 
     public boolean inheritsFrom(String parentName) {
-        return Streams.concat(Streams.stream(concreteParent()), getInterfaces()).parallel()//
+        return FastStream.ofNullable(concreteParent()).concat(getInterfaces())
                 .anyMatch(e -> e.getName().equals(parentName) || e.inheritsFrom(parentName));
     }
 

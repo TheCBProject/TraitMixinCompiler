@@ -6,7 +6,7 @@ import codechicken.mixin.api.JavaName;
 import codechicken.mixin.api.MixinCompiler;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
+import net.covers1624.quack.collection.FastStream;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -20,14 +20,12 @@ import org.objectweb.asm.Type;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static codechicken.mixin.util.Utils.asmName;
 
 /**
  * Created by covers1624 on 4/14/20.
  */
-@SuppressWarnings ("UnstableApiUsage")//We are careful
 public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
 
     private static final Logger logger = LogManager.getLogger();
@@ -91,16 +89,15 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
                     .map(Utils::asmName)
                     .map(traits::get)
                     .filter(Objects::nonNull)
-                    .collect(ImmutableSet.toImmutableSet());
+                    .toImmutableSet();
         });
     }
 
     protected void loadAnnotations(Class<? extends Annotation> aClass, Class<? extends Annotation> aListClass) {
         Type aType = Type.getType(aClass);
         Type lType = Type.getType(aListClass);
-        ModList.get().getAllScanData().stream()
-                .map(ModFileScanData::getAnnotations)
-                .flatMap(Collection::stream)
+        FastStream.of(ModList.get().getAllScanData())
+                .flatMap(ModFileScanData::getAnnotations)
                 .filter(a -> a.annotationType().equals(aType) || a.annotationType().equals(lType))
                 .filter(a -> a.targetType() == ElementType.TYPE)
                 .map(a -> {
@@ -131,11 +128,11 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
                 });
     }
 
-    protected Stream<Class<?>> hierarchy(Class<?> clazz) {
-        return Streams.concat(
-                Stream.of(clazz),
-                Arrays.stream(clazz.getInterfaces()).flatMap(this::hierarchy),
-                Streams.stream(Optional.ofNullable(clazz.getSuperclass())).flatMap(this::hierarchy)
+    protected FastStream<Class<?>> hierarchy(Class<?> clazz) {
+        return FastStream.concat(
+                FastStream.of(clazz),
+                FastStream.of(clazz.getInterfaces()).flatMap(this::hierarchy),
+                FastStream.ofNullable(clazz.getSuperclass()).flatMap(this::hierarchy)
         );
     }
 

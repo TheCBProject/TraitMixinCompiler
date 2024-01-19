@@ -6,8 +6,6 @@ import codechicken.mixin.util.ClassNodeInfo;
 import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.util.Optional;
-
 /**
  * Created by covers1624 on 19/1/24.
  */
@@ -24,9 +22,11 @@ public class ScalaClassInfo extends ClassNodeInfo {
     }
 
     @Override
-    public Optional<ClassInfo> concreteParent() {
-        ClassInfo i = getSuperClass().orElse(null);
-        return i instanceof ScalaClassInfo info && info.isTrait() ? info.concreteParent() : Optional.ofNullable(i);
+    public ClassInfo concreteParent() {
+        ClassInfo info = getSuperClass();
+        if (info instanceof ScalaClassInfo sInfo && sInfo.isTrait()) return sInfo.concreteParent();
+
+        return info;
     }
 
     @Override
@@ -35,8 +35,8 @@ public class ScalaClassInfo extends ClassNodeInfo {
     }
 
     @Override
-    public Optional<ClassInfo> getSuperClass() {
-        return Optional.ofNullable(mixinCompiler.getClassInfo(cSym.jParent()));
+    public ClassInfo getSuperClass() {
+        return mixinCompiler.getClassInfo(cSym.jParent());
     }
 
     public boolean isTrait() {

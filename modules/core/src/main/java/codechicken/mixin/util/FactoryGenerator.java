@@ -1,6 +1,7 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinCompiler;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -9,7 +10,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static codechicken.mixin.util.Utils.asmName;
 import static org.objectweb.asm.Opcodes.*;
@@ -39,18 +39,19 @@ public class FactoryGenerator {
             throw new IllegalArgumentException("No implementable methods found for class: " + clazz.getName());
         }
         if (methods.length > 1) {
-            String names = Arrays.stream(methods)
+            String names = FastStream.of(methods)
                     .map(Method::getName)
-                    .collect(Collectors.joining(", ", "[", "]"));
-            throw new IllegalStateException("Multiple implementable methods found. " + names + " in " + clazz.getName());
+                    .join(",");
+            throw new IllegalStateException("Multiple implementable methods found. [" + names + "] in " + clazz.getName());
         }
         return methods[0];
     }
 
     public <T, F> F generateFactory(Class<T> actualClass, Class<F> factoryClazz) {
         Method factoryMethod = findMethod(factoryClazz);
-        Utils.findConstructor(actualClass, factoryMethod.getParameterTypes())
-                .orElseThrow(() -> new IllegalArgumentException("Unable to find constructor for " + actualClass.getName() + " that matches Factory method in " + factoryClazz.getName()));
+        if (Utils.findConstructor(actualClass, factoryMethod.getParameterTypes()) == null) {
+            throw new IllegalArgumentException("Unable to find constructor for " + actualClass.getName() + " that matches Factory method in " + factoryClazz.getName());
+        }
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         MethodVisitor mv;

@@ -1,15 +1,13 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinCompiler;
+import net.covers1624.quack.collection.FastStream;
 import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by covers1624 on 2/11/20.
@@ -25,20 +23,20 @@ public class ReflectionClassInfo extends ClassInfo {
         super(mixinCompiler);
         this.clazz = clazz;
         name = Utils.asmName(clazz.getName());
-        interfaces = Arrays.stream(clazz.getInterfaces())//
-                .map(mixinCompiler::getClassInfo)//
-                .collect(Collectors.toList());
-        methods = Arrays.stream(clazz.getMethods())//
-                .map(ReflectionMethodInfo::new)//
-                .collect(Collectors.toList());
+        interfaces = FastStream.of(clazz.getInterfaces())
+                .map(mixinCompiler::getClassInfo)
+                .toList();
+        methods = FastStream.of(clazz.getMethods())
+                .map(ReflectionMethodInfo::new)
+                .toList(FastStream.infer());
     }
 
     //@formatter:off
     @Override public String getName() { return name; }
     @Override public boolean isInterface() { return clazz.isInterface(); }
-    @Override public Optional<ClassInfo> getSuperClass() { return Optional.ofNullable(mixinCompiler.getClassInfo(clazz.getSuperclass())); }
-    @Override public Stream<ClassInfo> getInterfaces() { return interfaces.stream(); }
-    @Override public Stream<MethodInfo> getMethods() { return methods.stream(); }
+    @Override public ClassInfo getSuperClass() { return mixinCompiler.getClassInfo(clazz.getSuperclass()); }
+    @Override public Iterable<ClassInfo> getInterfaces() { return interfaces; }
+    @Override public Iterable<MethodInfo> getMethods() { return methods; }
     //@formatter:on
 
     public class ReflectionMethodInfo implements MethodInfo {

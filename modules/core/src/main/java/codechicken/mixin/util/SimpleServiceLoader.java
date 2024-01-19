@@ -11,14 +11,14 @@ import java.util.Set;
 
 /**
  * Basically a re-implementation of ServiceLoader that does things a little differently.
- *
+ * <p>
  * Services are only class loaded and not instantiated, useful for some applications.
  * {@link #poll()} must be called to actually load stuff, new services found directly
  * after that poll operation can be obtained via {@link #getNewServices()}, this set
  * is cleared each time {@link #poll()} is called. All found services can be retrieved
  * via {@link #getAllServices()}.
- *
- *
+ * <p>
+ * <p>
  * Created by covers1624 on 15/11/18.
  */
 public class SimpleServiceLoader<S> {

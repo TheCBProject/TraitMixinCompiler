@@ -7,6 +7,9 @@ import codechicken.mixin.api.MixinDebugger;
 import codechicken.mixin.api.MixinLanguageSupport;
 import codechicken.mixin.util.*;
 import com.google.common.collect.Lists;
+import net.covers1624.quack.collection.ColUtils;
+import net.covers1624.quack.collection.FastStream;
+import net.covers1624.quack.util.SneakyUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,9 +19,10 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import javax.annotation.Nullable;
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
@@ -62,13 +66,13 @@ public class MixinCompilerImpl implements MixinCompiler {
         logger.log(LOG_LEVEL, "Starting CodeChicken MixinCompiler.");
         logger.log(LOG_LEVEL, "Loading MixinLanguageSupport services..");
         long start = System.nanoTime();
-        List<LanguageSupportInstance> languageSupportInstances = supportSupplier.get().stream()//
-                .map(LanguageSupportInstance::new)//
-                .sorted(Comparator.comparingInt(e -> e.sortIndex))//
-                .collect(Collectors.toList());
-        languageSupportList = languageSupportInstances.stream()//
-                .map(e -> e.instance)//
-                .collect(Collectors.toList());
+        List<LanguageSupportInstance> languageSupportInstances = FastStream.of(supportSupplier.get())
+                .map(LanguageSupportInstance::new)
+                .sorted(Comparator.comparingInt(e -> e.sortIndex))
+                .toList();
+        languageSupportList = FastStream.of(languageSupportInstances)
+                .map(e -> e.instance)
+                .toList();
         Map<String, LanguageSupportInstance> languageSupportInstanceMap = new HashMap<>();
         for (LanguageSupportInstance instance : languageSupportInstances) {
             LanguageSupportInstance other = languageSupportInstanceMap.get(instance.name);
@@ -77,8 +81,8 @@ public class MixinCompilerImpl implements MixinCompiler {
             }
             languageSupportInstanceMap.put(instance.name, instance);
         }
-        languageSupportMap = languageSupportInstanceMap.entrySet().stream()//
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().instance));
+        languageSupportMap = FastStream.of(languageSupportInstanceMap.entrySet())
+                .toMap(Map.Entry::getKey, e -> e.getValue().instance);
         long end = System.nanoTime();
         logger.log(LOG_LEVEL, "Loaded {} MixinLanguageSupport instances in {}.", languageSupportList.size(), Utils.timeString(start, end));
     }
@@ -89,9 +93,8 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
-    @SuppressWarnings ("unchecked")
-    public <T extends MixinLanguageSupport> Optional<T> findLanguageSupport(String name) {
-        return (Optional<T>) Optional.ofNullable(languageSupportMap.get(name));
+    public <T extends MixinLanguageSupport> @Nullable T getLanguageSupport(String name) {
+        return SneakyUtils.unsafeCast(languageSupportMap.get(name));
     }
 
     @Override
@@ -118,22 +121,24 @@ public class MixinCompilerImpl implements MixinCompiler {
             return (Class<T>) mixinBackend.loadClass(baseInfo.getName().replace('/', '.'));
         }
         long start = System.nanoTime();
-        List<MixinInfo> baseTraits = traits.stream()//
-                .map(mixinMap::get)//
-                .collect(Collectors.toList());
-        List<MixinInfo> mixinInfos = baseTraits.stream()//
-                .flatMap(MixinInfo::linearize)//
-                .distinct()//
-                .collect(Collectors.toList());
-        List<ClassInfo> traitInfos = mixinInfos.stream()//
-                .map(MixinInfo::getName)//
-                .map(this::getClassInfo)//
-                .collect(Collectors.toList());
+        List<MixinInfo> baseTraits = FastStream.of(traits)
+                .map(mixinMap::get)
+                .toList();
+        List<MixinInfo> mixinInfos = FastStream.of(baseTraits)
+                .flatMap(MixinInfo::linearize)
+                .distinct()
+                .toList();
+        List<ClassInfo> traitInfos = FastStream.of(mixinInfos)
+                .map(MixinInfo::getName)
+                .map(this::getClassInfo)
+                .toList();
         ClassNode cNode = new ClassNode();
 
-        cNode.visit(V1_8, ACC_PUBLIC, name, null, superClass, baseTraits.stream().map(MixinInfo::getName).toArray(String[]::new));
+        cNode.visit(V1_8, ACC_PUBLIC, name, null, superClass, FastStream.of(baseTraits).map(MixinInfo::getName).toArray(new String[0]));
 
-        MethodInfo cInit = baseInfo.getMethods().filter(e -> e.getName().equals("<init>")).findFirst().orElseThrow(IllegalStateException::new);
+        MethodInfo cInit = FastStream.of(baseInfo.getMethods())
+                .filter(e -> e.getName().equals("<init>"))
+                .first();
         MethodNode mInit = (MethodNode) cNode.visitMethod(ACC_PUBLIC, "<init>", cInit.getDesc(), null, null);
         Utils.writeBridge(mInit, cInit.getDesc(), INVOKESPECIAL, superClass, "<init>", cInit.getDesc(), false);
         mInit.instructions.remove(mInit.instructions.getLast());//remove the RETURN from writeBridge
@@ -169,14 +174,15 @@ public class MixinCompilerImpl implements MixinCompiler {
                 String sDesc = s.substring(nIdx);
                 MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC, t.getName().replace("/", "$") + "$$super$" + sName, sDesc, null, null);
 
-                Optional<MixinInfo> prev = Lists.reverse(prevInfos).stream()//
-                        .filter(e -> e.getMethods().stream().anyMatch(m -> m.name.equals(sName) && m.desc.equals(sDesc)))//
-                        .findFirst();
-                //each super goes to the one before
-                if (prev.isPresent()) {
-                    Utils.writeStaticBridge(mv, sName, prev.get());
+                MixinInfo prev = FastStream.of(prevInfos)
+                        .reversed()
+                        .filter(e -> ColUtils.anyMatch(e.getMethods(), m -> m.name.equals(sName) && m.desc.equals(sDesc)))
+                        .firstOrDefault();
+                // each super goes to the one before
+                if (prev != null) {
+                    Utils.writeStaticBridge(mv, sName, prev);
                 } else {
-                    MethodInfo mInfo = baseInfo.findPublicImpl(sName, sDesc).orElseThrow(IllegalStateException::new);
+                    MethodInfo mInfo = Objects.requireNonNull(baseInfo.findPublicImpl(sName, sDesc));
                     Utils.writeBridge(mv, sDesc, INVOKESPECIAL, mInfo.getOwner().getName(), sName, sDesc, mInfo.getOwner().isInterface());
                 }
 
@@ -195,25 +201,27 @@ public class MixinCompilerImpl implements MixinCompiler {
             }
         }
 
-        //generate synthetic bridge methods for covariant return types
-        Set<ClassInfo> allParentInfos = Utils.of(baseInfo, traitInfos).stream()//
-                .flatMap(Utils::allParents)//
-                .collect(Collectors.toSet());
-        List<MethodInfo> allParentMethods = allParentInfos.stream()//
-                .flatMap(ClassInfo::getMethods)//
-                .collect(Collectors.toList());
+        // generate synthetic bridge methods for covariant return types
+        Set<ClassInfo> allParentInfos = FastStream.of(baseInfo)
+                .concat(traitInfos)
+                .flatMap(Utils::allParents)
+                .toSet();
+        List<MethodInfo> allParentMethods = FastStream.of(allParentInfos)
+                .flatMap(ClassInfo::getMethods)
+                .toList();
 
         for (String nameDesc : new HashSet<>(methodSigs)) {
             int nIdx = nameDesc.indexOf('(');
             String sName = nameDesc.substring(0, nIdx);
             String sDesc = nameDesc.substring(nIdx);
             String pDesc = sDesc.substring(0, sDesc.lastIndexOf(")") + 1);
-            allParentMethods.stream().filter(m -> m.getName().equals(sName) && m.getDesc().startsWith(pDesc)).forEach(m -> {
-                if (methodSigs.add(m.getName() + m.getDesc())) {
-                    MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC | ACC_SYNTHETIC | ACC_BRIDGE, m.getName(), m.getDesc(), null, m.getExceptions());
-                    Utils.writeBridge(mv, mv.desc, INVOKEVIRTUAL, cNode.name, sName, sDesc, (cNode.access & ACC_INTERFACE) != 0);
-                }
-            });
+            for (MethodInfo m : allParentMethods) {
+                if (!m.getName().equals(sName) || !m.getDesc().startsWith(pDesc)) continue;
+                if (!methodSigs.add(m.getName() + m.getDesc())) continue;
+
+                MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC | ACC_SYNTHETIC | ACC_BRIDGE, m.getName(), m.getDesc(), null, m.getExceptions());
+                Utils.writeBridge(mv, mv.desc, INVOKEVIRTUAL, cNode.name, sName, sDesc, (cNode.access & ACC_INTERFACE) != 0);
+            }
         }
 
         byte[] bytes = ASMHelper.createBytes(cNode, COMPUTE_FRAMES | COMPUTE_MAXS);
@@ -248,11 +256,9 @@ public class MixinCompilerImpl implements MixinCompiler {
         }
 
         for (MixinLanguageSupport languageSupport : languageSupportList) {
-            Optional<MixinInfo> opt = languageSupport.buildMixinTrait(cNode);
-            if (!opt.isPresent()) {
-                continue;
-            }
-            info = opt.get();
+            info = languageSupport.buildMixinTrait(cNode);
+            if (info == null) continue;
+
             if (!cNode.name.equals(info.getName())) {
                 throw new IllegalStateException("Traits must have the same name as their ClassNode. Got: " + info.getName() + ", Expected: " + cNode.name);
             }
@@ -268,9 +274,9 @@ public class MixinCompilerImpl implements MixinCompiler {
         }
         ClassNode cNode = getClassNode(name);
         for (MixinLanguageSupport languageSupport : languageSupportList) {
-            Optional<ClassInfo> info = languageSupport.obtainInfo(name, cNode);
-            if (info.isPresent()) {
-                return info.get();
+            ClassInfo info = languageSupport.obtainInfo(name, cNode);
+            if (info != null) {
+                return info;
             }
         }
         return null;
@@ -306,13 +312,18 @@ public class MixinCompilerImpl implements MixinCompiler {
             sortIndex = sIndex != null ? sIndex.value() : 1000;
 
             logger.log(LOG_LEVEL, "Loading MixinLanguageSupport '{}', Name: '{}', Sorting Index: '{}'", clazz.getName(), name, sortIndex);
-            Optional<MixinLanguageSupport> instance = Utils.findConstructor(clazz, MixinCompiler.class)//
-                    .map(c -> Utils.newInstance(c, MixinCompilerImpl.this));
-            this.instance = instance.orElseGet(() ->//
-                    Utils.findConstructor(clazz)//
-                            .map(Utils::newInstance)//
-                            .orElseThrow(RuntimeException::new)//
-            );
+            Constructor<? extends MixinLanguageSupport> ctor = Utils.findConstructor(clazz, MixinCompiler.class);
+            Object[] args;
+            if (ctor != null) {
+                args = new Object[] { MixinCompilerImpl.this };
+            } else {
+                ctor = Utils.findConstructor(clazz);
+                args = new Object[0];
+            }
+            if (ctor == null) {
+                throw new RuntimeException("Expected MixinLanguageSupport to have either no-args ctor or take a MixinCompiler instance.");
+            }
+            instance = Utils.newInstance(ctor, args);
         }
 
         @Override
