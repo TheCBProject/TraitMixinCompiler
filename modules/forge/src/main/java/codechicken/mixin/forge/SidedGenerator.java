@@ -12,9 +12,9 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.moddiscovery.ModAnnotation;
 import net.minecraftforge.forgespi.language.ModFileScanData;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -27,7 +27,7 @@ import static codechicken.mixin.util.Utils.asmName;
  */
 public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger LOGGER = LoggerFactory.getLogger(SidedGenerator.class);
 
     protected final Map<String, TraitKey> clientTraits = new HashMap<>();
     protected final Map<String, TraitKey> serverTraits = new HashMap<>();
@@ -110,12 +110,12 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
                 })
                 .forEach(p -> {
                     String tName = p.a.clazz().getInternalName();
-                    logger.info("Trait: {}", tName);
+                    LOGGER.info("Trait: {}", tName);
                     for (Map<String, Object> data : p.dataList) {
                         Type marker = (Type) data.get("value");
                         ModAnnotation.EnumHolder holder = (ModAnnotation.EnumHolder) data.get("side");
                         TraitSide side = holder != null ? TraitSide.valueOf(holder.getValue()) : TraitSide.COMMON;
-                        logger.info("    Marker: {}, Side: {}", marker.getInternalName(), side);
+                        LOGGER.info("    Marker: {}, Side: {}", marker.getInternalName(), side);
                         if (side.isCommon() || side.isClient() && FMLEnvironment.dist == Dist.CLIENT) {
                             registerSide(clientTraits, marker.getInternalName(), tName);
                         }
@@ -147,10 +147,10 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
         TraitKey newTrait = registerTrait(trait);
         if (existing != null) {
             if (!existing.equals(newTrait)) {
-                logger.error("Attempted to re-register trait for '{}', with a different impl, Ignoring. Existing: '{}', New: '{}'", marker, existing.getTName(), newTrait.getTName());
+                LOGGER.error("Attempted to re-register trait for '{}', with a different impl, Ignoring. Existing: '{}', New: '{}'", marker, existing.getTName(), newTrait.getTName());
                 return;
             } else if (existing.equals(newTrait)) {
-                logger.debug("Skipping re-register of trait for '{}', same impl detected.", marker);
+                LOGGER.debug("Skipping re-register of trait for '{}', same impl detected.", marker);
                 return;
             }
         }

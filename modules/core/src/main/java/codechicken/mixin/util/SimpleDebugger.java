@@ -1,12 +1,12 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinDebugger;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import static codechicken.mixin.MixinCompilerImpl.LOG_LEVEL;
  */
 public class SimpleDebugger implements MixinDebugger {
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger LOGGER = LoggerFactory.getLogger(SimpleDebugger.class);
 
     private final Path root;
     private final DumpType type;
@@ -33,16 +33,16 @@ public class SimpleDebugger implements MixinDebugger {
         try {
             if (Files.exists(root)) {
                 if (!Files.isDirectory(root)) {
-                    logger.warn("Expected '{}' to be a directory. Overwriting..", root);
+                    LOGGER.warn("Expected '{}' to be a directory. Overwriting..", root);
                     Files.delete(root);
                 } else {
-                    logger.log(LOG_LEVEL, "Clearing debugger output. '{}'", root.toAbsolutePath());
+                    LOGGER.atLevel(LOG_LEVEL).log("Clearing debugger output. '{}'", root.toAbsolutePath());
                     Utils.deleteFolder(root);
                 }
             }
             Files.createDirectories(root);
         } catch (IOException e) {
-            logger.error("Encountered an error setting up SimpleDebugger.", e);
+            LOGGER.error("Encountered an error setting up SimpleDebugger.", e);
         }
     }
 
@@ -66,7 +66,7 @@ public class SimpleDebugger implements MixinDebugger {
             switch (type) {
                 case TEXT: {
                     try {
-                        logger.log(LOG_LEVEL, "Dumping '{}' from {} as text", name, from);
+                        LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' from {} as text", name, from);
                         Path path = folder.resolve(name + ".txt");
                         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
                             ClassVisitor cv = new TraceClassVisitor(null, new Textifier(), new PrintWriter(writer));
@@ -77,12 +77,12 @@ public class SimpleDebugger implements MixinDebugger {
                     } catch (IOException e) {
                         throw e;// Rethrow
                     } catch (Exception e) {
-                        logger.warn("Fatal exception dumping as text. Dumping as binary.", e);
+                        LOGGER.warn("Fatal exception dumping as text. Dumping as binary.", e);
                         //Fall through to Binary.
                     }
                 }
                 case BINARY: {
-                    logger.log(LOG_LEVEL, "Dumping '{}' from {} as binary.", name, from);
+                    LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' from {} as binary.", name, from);
                     Path path = folder.resolve(name + ".class");
                     try (OutputStream os = Files.newOutputStream(path)) {
                         os.write(bytes);
@@ -91,7 +91,7 @@ public class SimpleDebugger implements MixinDebugger {
                 }
             }
         } catch (IOException e) {
-            logger.error("Unable to dump '{}' to disk.", name, e);
+            LOGGER.error("Unable to dump '{}' to disk.", name, e);
         }
     }
 

@@ -7,12 +7,12 @@ import codechicken.mixin.util.ClassInfo;
 import codechicken.mixin.util.FieldMixin;
 import codechicken.mixin.util.MixinInfo;
 import net.covers1624.quack.collection.FastStream;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 @LanguageName ("scala")
 public class MixinScalaLanguageSupport implements MixinLanguageSupport {
 
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LoggerFactory.getLogger(MixinScalaLanguageSupport.class);
 
     private final MixinCompiler mixinCompiler;
 
@@ -77,7 +77,7 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
 
         ClassSymbolRef cSym = info.cSym;
         for (ScalaSignature.MethodSymbol sym : sig.<ScalaSignature.MethodSymbol>collect(8)) {
-            LOGGER.info(sym);
+            LOGGER.debug(sym.toString());
             if (sym.isParam() || !sym.owner().equals(cSym)) continue;
             if (filtered.contains(sym.full())) continue;
 

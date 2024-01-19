@@ -10,15 +10,15 @@ import com.google.common.collect.Lists;
 import net.covers1624.quack.collection.ColUtils;
 import net.covers1624.quack.collection.FastStream;
 import net.covers1624.quack.util.SneakyUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -36,8 +36,8 @@ import static org.objectweb.asm.Opcodes.*;
  */
 public class MixinCompilerImpl implements MixinCompiler {
 
-    public static final Level LOG_LEVEL = Level.getLevel(System.getProperty("codechicken.mixin.log_level", "DEBUG"));
-    private static final Logger logger = LogManager.getLogger();
+    public static final Level LOG_LEVEL = Level.valueOf(System.getProperty("codechicken.mixin.log_level", "DEBUG"));
+    private static final Logger LOGGER = LoggerFactory.getLogger(MixinCompilerImpl.class);
 
     private final MixinBackend mixinBackend;
     private final MixinDebugger debugger;
@@ -63,8 +63,8 @@ public class MixinCompilerImpl implements MixinCompiler {
     public MixinCompilerImpl(MixinBackend mixinBackend, MixinDebugger debugger, Supplier<Collection<Class<? extends MixinLanguageSupport>>> supportSupplier) {
         this.mixinBackend = mixinBackend;
         this.debugger = debugger;
-        logger.log(LOG_LEVEL, "Starting CodeChicken MixinCompiler.");
-        logger.log(LOG_LEVEL, "Loading MixinLanguageSupport services..");
+        LOGGER.atLevel(LOG_LEVEL).log("Starting CodeChicken MixinCompiler.");
+        LOGGER.atLevel(LOG_LEVEL).log("Loading MixinLanguageSupport services..");
         long start = System.nanoTime();
         List<LanguageSupportInstance> languageSupportInstances = FastStream.of(supportSupplier.get())
                 .map(LanguageSupportInstance::new)
@@ -84,7 +84,7 @@ public class MixinCompilerImpl implements MixinCompiler {
         languageSupportMap = FastStream.of(languageSupportInstanceMap.entrySet())
                 .toMap(Map.Entry::getKey, e -> e.getValue().instance);
         long end = System.nanoTime();
-        logger.log(LOG_LEVEL, "Loaded {} MixinLanguageSupport instances in {}.", languageSupportList.size(), Utils.timeString(start, end));
+        LOGGER.atLevel(LOG_LEVEL).log("Loaded {} MixinLanguageSupport instances in {}.", languageSupportList.size(), Utils.timeString(start, end));
     }
 
     @Override
@@ -226,7 +226,7 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         byte[] bytes = ASMHelper.createBytes(cNode, COMPUTE_FRAMES | COMPUTE_MAXS);
         long end = System.nanoTime();
-        logger.log(LOG_LEVEL, "Generation of {} with [{}] took {}", superClass, String.join(", ", traits), Utils.timeString(start, end));
+        LOGGER.atLevel(LOG_LEVEL).log("Generation of {} with [{}] took {}", superClass, String.join(", ", traits), Utils.timeString(start, end));
         return defineClass(name, bytes);
     }
 
@@ -311,7 +311,7 @@ public class MixinCompilerImpl implements MixinCompiler {
             name = lName.value();
             sortIndex = sIndex != null ? sIndex.value() : 1000;
 
-            logger.log(LOG_LEVEL, "Loading MixinLanguageSupport '{}', Name: '{}', Sorting Index: '{}'", clazz.getName(), name, sortIndex);
+            LOGGER.atLevel(LOG_LEVEL).log("Loading MixinLanguageSupport '{}', Name: '{}', Sorting Index: '{}'", clazz.getName(), name, sortIndex);
             Constructor<? extends MixinLanguageSupport> ctor = Utils.findConstructor(clazz, MixinCompiler.class);
             Object[] args;
             if (ctor != null) {
