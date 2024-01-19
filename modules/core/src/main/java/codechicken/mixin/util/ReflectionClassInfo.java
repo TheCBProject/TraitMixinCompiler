@@ -50,10 +50,10 @@ public class ReflectionClassInfo extends ClassInfo {
         private ReflectionMethodInfo(Method method) {
             name = method.getName();
             desc = Type.getType(method).getDescriptor();
-            exceptions = Arrays.stream(method.getExceptionTypes())//
-                    .map(Class::getName)//
-                    .map(Utils::asmName)//
-                    .toArray(String[]::new);
+            exceptions = FastStream.of(method.getExceptionTypes())
+                    .map(Class::getName)
+                    .map(Utils::asmName)
+                    .toArray(new String[0]);
             isPrivate = Modifier.isPrivate(method.getModifiers());
             isAbstract = Modifier.isAbstract(method.getModifiers());
         }

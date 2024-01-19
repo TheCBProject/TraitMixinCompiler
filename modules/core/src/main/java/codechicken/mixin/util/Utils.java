@@ -3,12 +3,12 @@ package codechicken.mixin.util;
 import codechicken.asm.StackAnalyser;
 import net.covers1624.quack.collection.ColUtils;
 import net.covers1624.quack.collection.FastStream;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
@@ -66,16 +66,6 @@ public class Utils {
         }
     }
 
-    public static <T> List<T> of(T first, List<T> rest) {
-        if (first == null) {
-            return rest;
-        }
-        List<T> list = new ArrayList<>(rest.size() + 1);
-        list.add(first);
-        list.addAll(rest);
-        return list;
-    }
-
     public static void deleteFolder(Path folder) throws IOException {
         try (Stream<Path> stream = Files.walk(folder)) {
             stream.sorted(Comparator.reverseOrder()).forEach(p -> {
@@ -118,11 +108,6 @@ public class Utils {
                 .flatMap(Utils::allParents);
     }
 
-    @Deprecated // This should not be used, specify isInterface explicitly.
-    public static void finishBridgeCall(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc) {
-        finishBridgeCall(mv, mvDesc, opcode, owner, name, desc, opcode == INVOKEINTERFACE);
-    }
-
     public static void finishBridgeCall(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc, boolean isInterface) {
         Type[] args = Type.getArgumentTypes(mvDesc);
         Type returnType = Type.getReturnType(mvDesc);
@@ -147,18 +132,10 @@ public class Utils {
     }
 
     public static void writeStaticBridge(MethodNode mv, String mName, MixinInfo info) {
-        writeBridge(mv, mv.desc, INVOKESTATIC, info.getName(), mName + "$", staticDesc(info.getName(), mv.desc), true);
+        writeBridge(mv, mv.desc, INVOKESTATIC, info.name(), mName + "$", staticDesc(info.name(), mv.desc), true);
     }
 
     public static boolean isScalaClass(ClassNode node) {
         return ColUtils.anyMatch(node.visibleAnnotations, e -> e.desc.equals("Lscala/reflect/ScalaSignature;"));
-    }
-
-    /**
-     * Throws an exception without compiler warnings.
-     */
-    @SuppressWarnings ("unchecked")
-    public static <T extends Throwable> void throwUnchecked(Throwable t) throws T {
-        throw (T) t;
     }
 }

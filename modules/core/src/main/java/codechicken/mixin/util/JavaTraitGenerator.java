@@ -4,12 +4,12 @@ import codechicken.asm.*;
 import codechicken.mixin.api.MixinCompiler;
 import net.covers1624.quack.collection.ColUtils;
 import net.covers1624.quack.collection.FastStream;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Function;
 
@@ -33,7 +33,7 @@ public class JavaTraitGenerator {
 
     protected List<FieldMixin> traitFields;
     protected List<MethodNode> traitMethods = new ArrayList<>();
-    protected List<String> supers = new ArrayList<>();
+    protected Set<String> supers = new LinkedHashSet<>();
     protected MixinInfo mixinInfo;
 
     protected Map<String, String> fieldNameLookup;
@@ -42,10 +42,27 @@ public class JavaTraitGenerator {
     public JavaTraitGenerator(MixinCompiler mixinCompiler, ClassNode cNode) {
         this.mixinCompiler = mixinCompiler;
         this.cNode = cNode;
-        this.tNode = new ClassNode();
-        this.sNode = new ClassNode();
+        tNode = new ClassNode();
+        sNode = new ClassNode();
         checkNode();
-        operate();
+        staticFields = FastStream.of(cNode.fields)
+                .filter(e -> (e.access & ACC_STATIC) != 0)
+                .toList();
+
+        instanceFields = FastStream.of(cNode.fields)
+                .filter(e -> (e.access & ACC_STATIC) == 0)
+                .toList();
+
+        traitFields = FastStream.of(instanceFields)
+                .map(f -> new FieldMixin(f.name, f.desc, f.access))
+                .toList();
+
+        fieldNameLookup = FastStream.of(traitFields)
+                .toMap(FieldMixin::name, e -> e.getAccessName(cNode.name));
+
+        methodSigLookup = FastStream.of(cNode.methods)
+                .toMap(e -> e.name + e.desc, Function.identity());
+        mixinInfo = operate();
     }
 
     protected void checkNode() {
@@ -56,7 +73,7 @@ public class JavaTraitGenerator {
             }
             throw new IllegalArgumentException("Cannot register java interface '" + cNode.name + "' as a mixin trait.");
         }
-        if (!cNode.innerClasses.isEmpty() && !ColUtils.anyMatch(cNode.innerClasses, this::checkInner)) {
+        if (!cNode.innerClasses.isEmpty() && !ColUtils.anyMatch(cNode.innerClasses, innerNode -> innerNode.outerName != null && !cNode.name.equals(innerNode.outerName) && !innerNode.name.startsWith(cNode.name))) {
             throw new IllegalArgumentException("Found illegal inner class for '" + cNode.name + "', use scala.");
         }
         List<FieldNode> invalidFields = FastStream.of(cNode.fields)
@@ -74,26 +91,7 @@ public class JavaTraitGenerator {
         }
     }
 
-    protected void operate() {
-        preProcessTrait();
-
-        staticFields = FastStream.of(cNode.fields)
-                .filter(e -> (e.access & ACC_STATIC) != 0)
-                .toList();
-
-        instanceFields = FastStream.of(cNode.fields)
-                .filter(e -> (e.access & ACC_STATIC) == 0)
-                .toList();
-
-        traitFields = FastStream.of(instanceFields)
-                .map(f -> new FieldMixin(f.name, f.desc, f.access))
-                .toList();
-
-        fieldNameLookup = FastStream.of(traitFields)
-                .toMap(FieldMixin::getName, e -> e.getAccessName(cNode.name));
-
-        methodSigLookup = FastStream.of(cNode.methods)
-                .toMap(e -> e.name + e.desc, Function.identity());
+    protected MixinInfo operate() {
 
         beforeTransform();
 
@@ -107,27 +105,20 @@ public class JavaTraitGenerator {
         staticFields.forEach(f -> sNode.visitField(ACC_STATIC, f.name, f.desc, f.signature, f.value));
 
         traitFields.forEach(f -> {
-            tNode.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, fieldNameLookup.get(f.getName()), "()" + f.getDesc(), null, null);
-            tNode.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, fieldNameLookup.get(f.getName()) + "_$eq", "(" + f.getDesc() + ")V", null, null);
+            tNode.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, fieldNameLookup.get(f.name()), "()" + f.desc(), null, null);
+            tNode.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, fieldNameLookup.get(f.name()) + "_$eq", "(" + f.desc() + ")V", null, null);
         });
         cNode.methods.forEach(this::convertMethod);
-        postProcessTrait();
-        mixinInfo = new MixinInfo(tNode.name, cNode.superName, Collections.emptyList(), traitFields, traitMethods, supers);
+        return new MixinInfo(tNode.name, cNode.superName, Collections.emptyList(), traitFields, traitMethods, List.copyOf(supers));
     }
 
     protected void preCheckNode() {
     }
 
-    protected void preProcessTrait() {
-    }
-
     protected void beforeTransform() {
     }
 
-    protected void postProcessTrait() {
-    }
-
-    public ClassNode getStaticNode() {
+    public @Nullable ClassNode getStaticNode() {
         if (sNode.methods.isEmpty() && sNode.fields.isEmpty()) {
             return null; // Pointless.
         }
@@ -287,7 +278,7 @@ public class JavaTraitGenerator {
             return null;
         }
 
-        return mixinCompiler.getClassInfo(stack.owner.getInternalName())
+        return Objects.requireNonNull(mixinCompiler.getClassInfo(stack.owner.getInternalName()), "Failed to load class: " + stack.owner.getInternalName())
                 .findPublicParentImpl(methodName, mInsn.desc);
     }
 
@@ -297,20 +288,6 @@ public class JavaTraitGenerator {
         MethodNode mv = (MethodNode) target.visitMethod(access | ACC_STATIC, name, desc, null, mNode.exceptions.toArray(new String[0]));
         ASMHelper.copy(mNode, mv);
         return mv;
-    }
-
-    //true if pass
-    private boolean checkInner(InnerClassNode innerNode) {
-        if (innerNode.outerName == null) {
-            return false;
-        }
-        if (cNode.name.equals(innerNode.outerName)) {
-            return false;
-        }
-        if (innerNode.name.startsWith(cNode.name)) {
-            return false;
-        }
-        return true;
     }
 
     private static List<StackAnalyser.StackEntry> peekArgs(StackAnalyser analyser, String desc) {
@@ -327,7 +304,7 @@ public class JavaTraitGenerator {
     public static class InsnPointer {
 
         public final InsnList insnList;
-        public AbstractInsnNode pointer;
+        public @Nullable AbstractInsnNode pointer;
 
         public InsnPointer(InsnList insnList) {
             this.insnList = insnList;
@@ -340,11 +317,12 @@ public class JavaTraitGenerator {
             pointer = newInsn;
         }
 
-        public AbstractInsnNode get() {
+        public @Nullable AbstractInsnNode get() {
             return pointer;
         }
 
         public AbstractInsnNode advance() {
+            assert pointer != null;
             return pointer = pointer.getNext();
         }
     }

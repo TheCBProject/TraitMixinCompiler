@@ -3,8 +3,6 @@ package codechicken.mixin.api;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
 
-import java.util.function.BiConsumer;
-
 /**
  * Represents a 'user' facing interface for interacting and caching the {@link MixinCompiler}.
  * <p>
@@ -60,13 +58,6 @@ public interface MixinFactory<B, F> {
      * @return The classes traits, or null if it was not compiled by this factory.
      */
     ImmutableSet<TraitKey> getTraitsForClass(Class<?> clazz);
-
-    /**
-     * Adds a callback to be run when a new trait class is compiled.
-     *
-     * @param callback The callback.
-     */
-    void addCompilationCallback(BiConsumer<Class<? extends B>, ImmutableSet<TraitKey>> callback);
 
     interface TraitKey {
 

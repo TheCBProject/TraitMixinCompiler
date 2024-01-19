@@ -1,10 +1,13 @@
 package codechicken.mixin.api;
 
 import codechicken.asm.ASMHelper;
-import codechicken.mixin.util.*;
+import codechicken.mixin.util.ClassInfo;
+import codechicken.mixin.util.ClassNodeInfo;
+import codechicken.mixin.util.JavaTraitGenerator;
+import codechicken.mixin.util.MixinInfo;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 
-import javax.annotation.Nullable;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -30,15 +33,12 @@ public interface MixinLanguageSupport {
      * I.e: {@link codechicken.mixin.scala.MixinScalaLanguageSupport}, only loads
      * a {@link codechicken.mixin.scala.ScalaClassInfo} if the class has a
      * ScalaSignature Annotation, and is a Scala trait class.
-     * The only exception to this is the default Java implementation of this method
-     * it will greedy load ClassInfo's for everything.
      *
-     * @param name  The name of the class.
      * @param cNode The ClassNode.
      * @return The ClassInfo.
      */
     @Nullable
-    ClassInfo obtainInfo(String name, @Nullable ClassNode cNode);
+    ClassInfo obtainInfo(ClassNode cNode);
 
     /**
      * Tries to build a {@link MixinInfo} for the given {@link ClassNode}.
@@ -80,7 +80,7 @@ public interface MixinLanguageSupport {
      * The default java handling for MixinCompiler.
      */
     @LanguageName ("java")
-    @SortingIndex (Integer.MAX_VALUE)
+    @SortingIndex (Integer.MAX_VALUE) // Always last
     class JavaMixinLanguageSupport implements MixinLanguageSupport {
 
         protected final MixinCompiler mixinCompiler;
@@ -91,17 +91,12 @@ public interface MixinLanguageSupport {
         }
 
         public void setTraitGeneratorFactory(BiFunction<MixinCompiler, ClassNode, JavaTraitGenerator> factory) {
-            this.traitGeneratorFactory = factory;
+            traitGeneratorFactory = factory;
         }
 
         @Override
-        public ClassInfo obtainInfo(String name, ClassNode cNode) {
-            if (cNode != null) return new ClassNodeInfo(mixinCompiler, cNode);
-
-            Class<?> clazz = mixinCompiler.getMixinBackend().loadClass(name.replace("/", "."));
-            if (clazz != null) return new ReflectionClassInfo(mixinCompiler, clazz);
-
-            return null;
+        public ClassInfo obtainInfo(ClassNode cNode) {
+            return new ClassNodeInfo(mixinCompiler, cNode);
         }
 
         @Override

@@ -31,10 +31,10 @@ public class FactoryGenerator {
         if (!clazz.isInterface()) {
             throw new RuntimeException("Class is not an interface.");
         }
-        Method[] methods = Arrays.stream(clazz.getMethods())
+        Method[] methods = FastStream.of(clazz.getMethods())
                 .filter(e -> !Modifier.isStatic(e.getModifiers()))
                 .filter(e -> Modifier.isAbstract(e.getModifiers()))
-                .toArray(Method[]::new);
+                .toArray(new Method[0]);
         if (methods.length == 0) {
             throw new IllegalArgumentException("No implementable methods found for class: " + clazz.getName());
         }
@@ -90,9 +90,9 @@ public class FactoryGenerator {
 
         Class<F> factory = compiler.defineClass(cName, bytes);
         try {
-            return factory.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException("Unable to instantiate new factory.", e);
+            return factory.getConstructor().newInstance();
+        } catch (Throwable ex) {
+            throw new RuntimeException("Unable to instantiate new factory.", ex);
         }
     }
 

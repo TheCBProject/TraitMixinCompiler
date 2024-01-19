@@ -4,10 +4,9 @@ import codechicken.mixin.MixinCompilerImpl;
 import codechicken.mixin.util.ClassInfo;
 import codechicken.mixin.util.JavaTraitGenerator;
 import codechicken.mixin.util.MixinInfo;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
@@ -77,7 +76,7 @@ public interface MixinCompiler {
      * @param name The name.
      * @return The {@link MixinLanguageSupport} instance or {@code null}
      */
-    <T extends MixinLanguageSupport> T getLanguageSupport(String name);
+    <T extends MixinLanguageSupport> @Nullable T getLanguageSupport(String name);
 
     /**
      * Gets a {@link ClassInfo} instance for the given class name.
@@ -86,7 +85,7 @@ public interface MixinCompiler {
      * @return The ClassInfo
      */
     @Nullable
-    ClassInfo getClassInfo(@Nullable @AsmName String name);
+    ClassInfo getClassInfo(@AsmName String name);
 
     /**
      * Overload for {@link #getClassInfo(String)}, taking a {@link ClassNode} instead.
@@ -95,7 +94,7 @@ public interface MixinCompiler {
      * @return The ClassInfo.
      */
     @Nullable
-    default ClassInfo getClassInfo(@Nonnull ClassNode node) {
+    default ClassInfo getClassInfo(ClassNode node) {
         return getClassInfo(node.name);
     }
 
@@ -117,7 +116,7 @@ public interface MixinCompiler {
      * @return The ClassNode.
      */
     @Nullable
-    ClassNode getClassNode(@AsmName @Nonnull String name);
+    ClassNode getClassNode(@AsmName String name);
 
     /**
      * Registers a Trait to the {@link MixinCompiler}.
@@ -155,7 +154,6 @@ public interface MixinCompiler {
      * @param bytes The bytes for the class.
      * @return The defined class.
      */
-    @Nonnull
     <T> Class<T> defineClass(@AsmName String name, byte[] bytes);
 
     /**

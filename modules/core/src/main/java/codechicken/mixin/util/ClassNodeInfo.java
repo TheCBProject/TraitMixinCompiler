@@ -32,7 +32,7 @@ public class ClassNodeInfo extends ClassInfo {
     //@formatter:off
     @Override public String getName() { return cNode.name; }
     @Override public boolean isInterface() { return (cNode.access & ACC_INTERFACE) != 0; }
-    @Override public ClassInfo getSuperClass() { return mixinCompiler.getClassInfo(cNode.superName); }
+    @Override public ClassInfo getSuperClass() { return cNode.superName != null ? mixinCompiler.getClassInfo(cNode.superName) : null; }
     @Override public Iterable<ClassInfo> getInterfaces() { return interfaces; }
     @Override public Iterable<MethodInfo> getMethods() { return methods; }
     public ClassNode getCNode() { return cNode; }

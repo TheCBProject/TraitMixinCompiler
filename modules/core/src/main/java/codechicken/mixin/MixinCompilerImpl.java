@@ -13,13 +13,13 @@ import net.covers1624.quack.util.SneakyUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.function.Supplier;
@@ -37,7 +37,7 @@ import static org.objectweb.asm.Opcodes.*;
 public class MixinCompilerImpl implements MixinCompiler {
 
     public static final Level LOG_LEVEL = Level.getLevel(System.getProperty("codechicken.mixin.log_level", "DEBUG"));
-    private static final Logger logger = LogManager.getLogger("CodeChicken/MixinCompiler");
+    private static final Logger logger = LogManager.getLogger();
 
     private final MixinBackend mixinBackend;
     private final MixinDebugger debugger;
@@ -117,9 +117,9 @@ public class MixinCompilerImpl implements MixinCompiler {
     @SuppressWarnings ("unchecked")
     public <T> Class<T> compileMixinClass(String name, String superClass, Set<String> traits) {
         ClassInfo baseInfo = getClassInfo(superClass);
-        if (traits.isEmpty()) {
-            return (Class<T>) mixinBackend.loadClass(baseInfo.getName().replace('/', '.'));
-        }
+        if (baseInfo == null) throw new IllegalArgumentException("Provided super class does not exist.");
+        if (traits.isEmpty()) return (Class<T>) Objects.requireNonNull(mixinBackend.loadClass(baseInfo.getName().replace('/', '.')));
+
         long start = System.nanoTime();
         List<MixinInfo> baseTraits = FastStream.of(traits)
                 .map(mixinMap::get)
@@ -129,12 +129,12 @@ public class MixinCompilerImpl implements MixinCompiler {
                 .distinct()
                 .toList();
         List<ClassInfo> traitInfos = FastStream.of(mixinInfos)
-                .map(MixinInfo::getName)
+                .map(MixinInfo::name)
                 .map(this::getClassInfo)
                 .toList();
         ClassNode cNode = new ClassNode();
 
-        cNode.visit(V1_8, ACC_PUBLIC, name, null, superClass, FastStream.of(baseTraits).map(MixinInfo::getName).toArray(new String[0]));
+        cNode.visit(V1_8, ACC_PUBLIC, name, null, superClass, FastStream.of(baseTraits).map(MixinInfo::name).toArray(new String[0]));
 
         MethodInfo cInit = FastStream.of(baseInfo.getMethods())
                 .filter(e -> e.getName().equals("<init>"))
@@ -147,20 +147,20 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         for (MixinInfo t : mixinInfos) {
             mInit.visitVarInsn(ALOAD, 0);
-            mInit.visitMethodInsn(INVOKESTATIC, t.getName(), "$init$", "(L" + t.getName() + ";)V", true);
+            mInit.visitMethodInsn(INVOKESTATIC, t.name(), "$init$", "(L" + t.name() + ";)V", true);
 
-            for (FieldMixin f : t.getFields()) {
-                FieldNode fv = (FieldNode) cNode.visitField(ACC_PRIVATE, f.getAccessName(t.getName()), f.getDesc(), null, null);
+            for (FieldMixin f : t.fields()) {
+                FieldNode fv = (FieldNode) cNode.visitField(ACC_PRIVATE, f.getAccessName(t.name()), f.desc(), null, null);
 
                 Type fType = Type.getType(fv.desc);
                 MethodVisitor mv;
-                mv = cNode.visitMethod(ACC_PUBLIC, fv.name, "()" + f.getDesc(), null, null);
+                mv = cNode.visitMethod(ACC_PUBLIC, fv.name, "()" + f.desc(), null, null);
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitFieldInsn(GETFIELD, name, fv.name, fv.desc);
                 mv.visitInsn(fType.getOpcode(IRETURN));
                 mv.visitMaxs(-1, -1);
 
-                mv = cNode.visitMethod(ACC_PUBLIC, fv.name + "_$eq", "(" + f.getDesc() + ")V", null, null);
+                mv = cNode.visitMethod(ACC_PUBLIC, fv.name + "_$eq", "(" + f.desc() + ")V", null, null);
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitVarInsn(fType.getOpcode(ILOAD), 1);
                 mv.visitFieldInsn(PUTFIELD, name, fv.name, fv.desc);
@@ -168,15 +168,15 @@ public class MixinCompilerImpl implements MixinCompiler {
                 mv.visitMaxs(-1, -1);
             }
 
-            for (String s : t.getSupers()) {
+            for (String s : t.supers()) {
                 int nIdx = s.indexOf('(');
                 String sName = s.substring(0, nIdx);
                 String sDesc = s.substring(nIdx);
-                MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC, t.getName().replace("/", "$") + "$$super$" + sName, sDesc, null, null);
+                MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC, t.name().replace("/", "$") + "$$super$" + sName, sDesc, null, null);
 
                 MixinInfo prev = FastStream.of(prevInfos)
                         .reversed()
-                        .filter(e -> ColUtils.anyMatch(e.getMethods(), m -> m.name.equals(sName) && m.desc.equals(sDesc)))
+                        .filter(e -> ColUtils.anyMatch(e.methods(), m -> m.name.equals(sName) && m.desc.equals(sDesc)))
                         .firstOrDefault();
                 // each super goes to the one before
                 if (prev != null) {
@@ -193,7 +193,7 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         Set<String> methodSigs = new HashSet<>();
         for (MixinInfo t : Lists.reverse(mixinInfos)) {//last trait gets first pick on methods
-            for (MethodNode m : t.getMethods()) {
+            for (MethodNode m : t.methods()) {
                 if (methodSigs.add(m.name + m.desc)) {
                     MethodNode mv = (MethodNode) cNode.visitMethod(ACC_PUBLIC, m.name, m.desc, null, m.exceptions.toArray(new String[0]));
                     Utils.writeStaticBridge(mv, m.name, t);
@@ -259,38 +259,38 @@ public class MixinCompilerImpl implements MixinCompiler {
             info = languageSupport.buildMixinTrait(cNode);
             if (info == null) continue;
 
-            if (!cNode.name.equals(info.getName())) {
-                throw new IllegalStateException("Traits must have the same name as their ClassNode. Got: " + info.getName() + ", Expected: " + cNode.name);
+            if (!cNode.name.equals(info.name())) {
+                throw new IllegalStateException("Traits must have the same name as their ClassNode. Got: " + info.name() + ", Expected: " + cNode.name);
             }
-            mixinMap.put(info.getName(), info);
+            mixinMap.put(info.name(), info);
             return info;
         }
         throw new IllegalStateException("No MixinLanguageSupport wished to handle class '" + cNode.name + "'");
     }
 
-    private ClassInfo obtainInfo(String name) {
-        if (name == null) {
-            return null;
-        }
+    private @Nullable ClassInfo obtainInfo(String name) {
         ClassNode cNode = getClassNode(name);
-        for (MixinLanguageSupport languageSupport : languageSupportList) {
-            ClassInfo info = languageSupport.obtainInfo(name, cNode);
-            if (info != null) {
-                return info;
+        if (cNode != null) {
+            for (MixinLanguageSupport languageSupport : languageSupportList) {
+                ClassInfo info = languageSupport.obtainInfo(cNode);
+                if (info != null) {
+                    return info;
+                }
             }
+        } else {
+            Class<?> clazz = mixinBackend.loadClass(name.replace('/', '.'));
+            if (clazz != null) return new ReflectionClassInfo(this, clazz);
         }
         return null;
     }
 
     @Override
     public ClassNode getClassNode(String name) {
-        if (name.equals("java/lang/Object")) {
-            return null;
-        }
+        if (name.equals("java/lang/Object")) return null;
+
         byte[] bytes = traitByteMap.computeIfAbsent(name, mixinBackend::getBytes);
-        if (bytes == null) {
-            return null;
-        }
+        if (bytes == null) return null;
+
         return ASMHelper.createClassNode(bytes, EXPAND_FRAMES);
     }
 
@@ -328,12 +328,11 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         @Override
         public String toString() {
-            return new StringJoiner(", ", LanguageSupportInstance.class.getSimpleName() + "[", "]")//
-                    .add("class=" + clazz.getName())//
-                    .add("name='" + name + "'")//
-                    .add("sortIndex=" + sortIndex)//
+            return new StringJoiner(", ", LanguageSupportInstance.class.getSimpleName() + "[", "]")
+                    .add("class=" + clazz.getName())
+                    .add("name='" + name + "'")
+                    .add("sortIndex=" + sortIndex)
                     .toString();
         }
     }
-
 }

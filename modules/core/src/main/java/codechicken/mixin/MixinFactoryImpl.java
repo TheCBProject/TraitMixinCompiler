@@ -7,6 +7,7 @@ import codechicken.mixin.util.FactoryGenerator;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
 import net.covers1624.quack.collection.FastStream;
+import net.covers1624.quack.util.SneakyUtils;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.util.*;
@@ -52,7 +53,8 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
     public synchronized TraitKey registerTrait(String tName) {
         ClassNode cNode = mixinCompiler.getClassNode(tName);
         if (cNode == null) {
-            Utils.throwUnchecked(new ClassNotFoundException(tName));
+            SneakyUtils.throwUnchecked(new ClassNotFoundException(tName));
+            return null;
         }
         TraitKey key = registeredTraits.get(tName);
         if (key != null) {
@@ -81,11 +83,6 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
         return traitLookup.get(clazz);
     }
 
-    @Override
-    public void addCompilationCallback(BiConsumer<Class<? extends B>, ImmutableSet<TraitKey>> callback) {
-        compileCallbacks.add(callback);
-    }
-
     private boolean checkParent(String parentName, ClassInfo info) {
         if (info.getName().equals(parentName)) return true;
 
@@ -100,7 +97,6 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
             Set<String> traitNames = FastStream.of(traits).map(TraitKey::getTName).toImmutableSet();
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);
             traitLookup.put(compiled, traits);
-            compileCallbacks.forEach(callback -> callback.accept(compiled, traits));
             return compiled;
         });
         return factoryGenerator.generateFactory(clazz, factoryClass);

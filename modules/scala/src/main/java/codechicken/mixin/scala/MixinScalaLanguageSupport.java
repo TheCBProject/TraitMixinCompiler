@@ -37,9 +37,7 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
     }
 
     @Override
-    public ClassInfo obtainInfo(String name, @Nullable ClassNode cNode) {
-        if (cNode == null) return null;
-
+    public ClassInfo obtainInfo(ClassNode cNode) {
         if (cNode.name.endsWith("$")) {
             String baseName = cNode.name.substring(0, cNode.name.length() - 1);
             ClassNode baseNode = mixinCompiler.getClassNode(baseName);
@@ -54,7 +52,7 @@ public class MixinScalaLanguageSupport implements MixinLanguageSupport {
         return scalaInfo(cNode, false);
     }
 
-    private ScalaClassInfo scalaInfo(ClassNode cNode, boolean obj) {
+    private @Nullable ScalaClassInfo scalaInfo(ClassNode cNode, boolean obj) {
         ScalaSignature sig = ScalaSignature.parse(cNode);
         if (sig == null) return null;
 

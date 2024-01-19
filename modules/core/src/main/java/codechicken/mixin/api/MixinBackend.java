@@ -1,11 +1,10 @@
 package codechicken.mixin.api;
 
-import codechicken.mixin.util.Utils;
+import net.covers1624.quack.io.IOUtils;
 import net.covers1624.quack.reflect.PrivateLookups;
+import net.covers1624.quack.util.SneakyUtils;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
@@ -27,8 +26,7 @@ public interface MixinBackend {
      * @param name The class name.
      * @return The bytes for the class.
      */
-    @Nullable
-    byte[] getBytes(@AsmName String name);
+    byte @Nullable [] getBytes(@AsmName String name);
 
     /**
      * Defines a class.
@@ -37,7 +35,6 @@ public interface MixinBackend {
      * @param bytes The bytes for the class.
      * @return The defined class.
      */
-    @Nonnull
     <T> Class<T> defineClass(String name, byte[] bytes);
 
     /**
@@ -46,7 +43,7 @@ public interface MixinBackend {
      * @param name The class name.
      * @return The loaded class.
      */
-    Class<?> loadClass(String name);
+    @Nullable Class<?> loadClass(String name);
 
     /**
      * Allows a MixinBackend to filter a method based on the annotation value for 'value'.
@@ -94,16 +91,10 @@ public interface MixinBackend {
                 if (is == null) {
                     return null;
                 }
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                byte[] buff = new byte[1024];
-                int len;
-                while ((len = is.read(buff)) != -1) {
-                    bos.write(buff, 0, len);
-                }
-                return bos.toByteArray();
+                return IOUtils.toBytes(is);
             } catch (IOException e) {
-                Utils.throwUnchecked(new ClassNotFoundException("Could not load bytes for '" + name + "'.", e));
-                return null;//never happens.
+                SneakyUtils.throwUnchecked(new ClassNotFoundException("Could not load bytes for '" + name + "'.", e));
+                return null;
             }
         }
 

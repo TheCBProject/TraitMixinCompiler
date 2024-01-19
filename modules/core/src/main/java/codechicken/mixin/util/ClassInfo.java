@@ -2,8 +2,7 @@ package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinCompiler;
 import net.covers1624.quack.collection.FastStream;
-
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Created by covers1624 on 2/11/20.
