@@ -12,7 +12,6 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.moddiscovery.ModAnnotation;
 import net.minecraftforge.forgespi.language.ModFileScanData;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Type;
@@ -96,6 +95,7 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
     protected void loadAnnotations(Class<? extends Annotation> aClass, Class<? extends Annotation> aListClass) {
         Type aType = Type.getType(aClass);
         Type lType = Type.getType(aListClass);
+        record Pair(ModFileScanData.AnnotationData a, List<Map<String, Object>> dataList) { }
         FastStream.of(ModList.get().getAllScanData())
                 .flatMap(ModFileScanData::getAnnotations)
                 .filter(a -> a.annotationType().equals(aType) || a.annotationType().equals(lType))
@@ -104,16 +104,14 @@ public class SidedGenerator<B, F, T> extends MixinFactoryImpl<B, F> {
                     if (a.annotationType().equals(lType)) {
                         @SuppressWarnings ("unchecked")
                         List<Map<String, Object>> entries = ((List<Map<String, Object>>) a.annotationData().get("value"));
-                        return Pair.of(a, entries);
+                        return new Pair(a, entries);
                     }
-                    return Pair.of(a, Collections.singletonList(a.annotationData()));
+                    return new Pair(a, Collections.singletonList(a.annotationData()));
                 })
                 .forEach(p -> {
-                    ModFileScanData.AnnotationData a = p.getLeft();
-                    List<Map<String, Object>> dataList = p.getRight();
-                    String tName = a.clazz().getInternalName();
+                    String tName = p.a.clazz().getInternalName();
                     logger.info("Trait: {}", tName);
-                    for (Map<String, Object> data : dataList) {
+                    for (Map<String, Object> data : p.dataList) {
                         Type marker = (Type) data.get("value");
                         ModAnnotation.EnumHolder holder = (ModAnnotation.EnumHolder) data.get("side");
                         TraitSide side = holder != null ? TraitSide.valueOf(holder.getValue()) : TraitSide.COMMON;
