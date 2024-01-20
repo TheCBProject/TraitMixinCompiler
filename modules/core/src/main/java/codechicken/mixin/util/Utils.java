@@ -101,11 +101,12 @@ public class Utils {
 
     public static FastStream<ClassInfo> allParents(ClassInfo info) {
         return FastStream.concat(
-                        FastStream.of(info),
+                FastStream.of(info),
+                FastStream.concat(
                         FastStream.ofNullable(info.getSuperClass()),
                         info.getInterfaces()
-                )
-                .flatMap(Utils::allParents);
+                ).flatMap(Utils::allParents)
+        );
     }
 
     public static void finishBridgeCall(MethodVisitor mv, String mvDesc, int opcode, String owner, String name, String desc, boolean isInterface) {
