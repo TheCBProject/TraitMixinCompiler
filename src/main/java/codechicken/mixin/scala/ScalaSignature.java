@@ -42,6 +42,8 @@ public class ScalaSignature {
     }
 
     public static @Nullable ScalaSignature parse(ClassNode cNode) {
+        if (cNode.visibleAnnotations == null) return null;
+
         return FastStream.of(cNode.visibleAnnotations)
                 .filter(e -> e.desc.equals("Lscala/reflect/ScalaSignature;"))
                 .map(e -> e.values.get(1).toString())
