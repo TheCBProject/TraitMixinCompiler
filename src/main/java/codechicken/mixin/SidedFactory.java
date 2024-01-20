@@ -105,17 +105,15 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
                 LOGGER.error("Failed to load ClassNode for trait {}", tName);
                 return;
             }
-            fudgeAnnotations(info.visibleAnnotations);
-            fudgeAnnotations(info.invisibleAnnotations);
             AnnotationLoader anns = new AnnotationLoader();
             info.accept(anns.forClass());
-            SidedTraitLoadable[] annotations = anns.getAnnotations(SidedTraitLoadable.class);
+            SidedTrait[] annotations = anns.getAnnotations(SidedTrait.class);
             if (annotations == null) {
                 LOGGER.error("Expected SidedTrait annotation to exist.");
                 return;
             }
-            for (SidedTraitLoadable ann : annotations) {
-                String marker = ann.value();
+            for (SidedTrait ann : annotations) {
+                String marker = ann.value().getName();
                 Side side = ann.side();
                 LOGGER.info("    Marker: {}, Side: {}", marker, side);
                 if (side.isCommon() || side.isClient() && getRuntimeSide().isClient()) {
@@ -176,58 +174,5 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
     }
 
     public interface TraitMarker {
-    }
-
-    private static final Type SIDED_TRAIT_TYPE = Type.getType(SidedTrait.class);
-    private static final Type SIDED_TRAIT_LIST_TYPE = Type.getType(SidedTrait.TraitList.class);
-    private static final Type SIDED_TRAIT_LOADABLE_TYPE = Type.getType(SidedTraitLoadable.class);
-    private static final Type SIDED_TRAIT_LOADABLE_LIST_TYPE = Type.getType(SidedTraitLoadable.TraitList.class);
-
-    private static void fudgeAnnotations(@Nullable List<AnnotationNode> annotations) {
-        if (annotations == null) return;
-
-        annotations.forEach(SidedFactory::fudgeAnnotation);
-    }
-
-    private static void fudgeAnnotation(AnnotationNode annotation) {
-        if (Type.getType(annotation.desc).equals(SIDED_TRAIT_TYPE)) {
-            annotation.desc = SIDED_TRAIT_LOADABLE_TYPE.getDescriptor();
-        } else if (Type.getType(annotation.desc).equals(SIDED_TRAIT_LIST_TYPE)) {
-            annotation.desc = SIDED_TRAIT_LOADABLE_LIST_TYPE.getDescriptor();
-        } else {
-            return;
-        }
-
-        for (ListIterator<Object> iterator = annotation.values.listIterator(); iterator.hasNext(); ) {
-            Object value = iterator.next();
-            if (value instanceof Type type) {
-                iterator.set(type.getInternalName());
-            } else if (value instanceof AnnotationNode ann) {
-                fudgeAnnotation(ann);
-            } else if (value instanceof List<?> list) {
-                for (Object o : list) {
-                    if (o instanceof AnnotationNode ann) {
-                        fudgeAnnotation(ann);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Copy of {@link SidedTrait} which does not use Class
-     * for {@link #value}.
-     */
-    @Repeatable (SidedTraitLoadable.TraitList.class)
-    public @interface SidedTraitLoadable {
-
-        String value();
-
-        SidedFactory.Side side() default SidedFactory.Side.COMMON;
-
-        @interface TraitList {
-
-            SidedTraitLoadable[] value();
-        }
     }
 }
