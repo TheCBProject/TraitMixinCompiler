@@ -135,8 +135,4 @@ public class Utils {
     public static void writeStaticBridge(MethodNode mv, String mName, MixinInfo info) {
         writeBridge(mv, mv.desc, INVOKESTATIC, info.name(), mName + "$", staticDesc(info.name(), mv.desc), true);
     }
-
-    public static boolean isScalaClass(ClassNode node) {
-        return ColUtils.anyMatch(node.visibleAnnotations, e -> e.desc.equals("Lscala/reflect/ScalaSignature;"));
-    }
 }

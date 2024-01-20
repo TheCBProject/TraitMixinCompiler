@@ -68,9 +68,6 @@ public class JavaTraitGenerator {
     protected void checkNode() {
         preCheckNode();
         if ((cNode.access & ACC_INTERFACE) != 0) {
-            if (Utils.isScalaClass(cNode)) {
-                throw new IllegalArgumentException("Cannot register scala trait interface '" + cNode.name + "' as a mixin trait. Please include the scala module on the classpath.");
-            }
             throw new IllegalArgumentException("Cannot register java interface '" + cNode.name + "' as a mixin trait.");
         }
         if (!cNode.innerClasses.isEmpty() && !ColUtils.anyMatch(cNode.innerClasses, innerNode -> innerNode.outerName != null && !cNode.name.equals(innerNode.outerName) && !innerNode.name.startsWith(cNode.name))) {
