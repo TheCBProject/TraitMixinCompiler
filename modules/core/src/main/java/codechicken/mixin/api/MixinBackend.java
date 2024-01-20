@@ -86,7 +86,7 @@ public interface MixinBackend {
         }
 
         @Override
-        public byte[] getBytes(String name) {
+        public byte @Nullable [] getBytes(String name) {
             try (InputStream is = classLoader.getResourceAsStream(name + ".class")) {
                 if (is == null) {
                     return null;

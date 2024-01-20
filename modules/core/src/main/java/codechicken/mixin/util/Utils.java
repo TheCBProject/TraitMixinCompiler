@@ -115,7 +115,7 @@ public class Utils {
         int localIndex = 1;
         for (Type arg : args) {
             mv.visitVarInsn(arg.getOpcode(ILOAD), localIndex);
-            localIndex += StackAnalyser.width(arg);
+            localIndex += arg.getSize();
         }
         mv.visitMethodInsn(opcode, owner, name, desc, isInterface);
         mv.visitInsn(returnType.getOpcode(IRETURN));
