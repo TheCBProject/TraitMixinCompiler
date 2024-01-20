@@ -3,23 +3,16 @@ package codechicken.mixin;
 import codechicken.mixin.api.AsmName;
 import codechicken.mixin.api.JavaName;
 import codechicken.mixin.api.MixinCompiler;
-import codechicken.mixin.api.SidedTrait;
-import codechicken.mixin.util.SimpleServiceLoader;
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
-import net.covers1624.quack.asm.annotation.AnnotationLoader;
 import net.covers1624.quack.collection.FastStream;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.annotation.Repeatable;
-import java.util.*;
-
-import static codechicken.mixin.util.Utils.asmName;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by covers1624 on 20/1/24.
@@ -88,48 +81,6 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
         });
     }
 
-    /**
-     * @return The current runtime side. {@link Side#CLIENT} OR {@link Side#SERVER}.
-     */
-    protected abstract Side getRuntimeSide();
-
-    protected void loadServices(Class<? extends TraitMarker> markerService) {
-        SimpleServiceLoader.load(markerService, cName -> {
-            Class<?> tClass;
-            try {
-                tClass = Class.forName(cName, true, mixinCompiler.getMixinBackend().getContextClassLoader());
-            } catch (ClassNotFoundException ex) {
-                LOGGER.error("Failed to load class for trait.");
-                return;
-            }
-            String tName = cName.replace('.', '/');
-            LOGGER.info("Trait: {}", tName);
-            ClassNode info = mixinCompiler.getClassNode(tName);
-            if (info == null) {
-                LOGGER.error("Failed to load ClassNode for trait {}", tName);
-                return;
-            }
-            AnnotationLoader anns = new AnnotationLoader();
-            info.accept(anns.forClass());
-            SidedTrait[] annotations = anns.getAnnotations(SidedTrait.class);
-            if (annotations == null) {
-                LOGGER.error("Expected SidedTrait annotation to exist.");
-                return;
-            }
-            for (SidedTrait ann : annotations) {
-                Class<?> marker = ann.value();
-                Side side = ann.side();
-                LOGGER.info("    Marker: {}, Side: {}", marker, side);
-                if (side.isCommon() || side.isClient() && getRuntimeSide().isClient()) {
-                    register(clientTraits, marker, tClass);
-                }
-                if (side.isCommon() || side.isServer()) {
-                    register(serverTraits, marker, tClass);
-                }
-            }
-        });
-    }
-
     protected FastStream<Class<?>> hierarchy(Class<?> clazz) {
         return FastStream.concat(
                 FastStream.of(clazz),
@@ -158,26 +109,5 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
             return;
         }
         map.put(marker, registerTrait(trait));
-    }
-
-    public enum Side {
-        COMMON,
-        SERVER,
-        CLIENT;
-
-        public boolean isClient() {
-            return this == CLIENT;
-        }
-
-        public boolean isServer() {
-            return this == SERVER;
-        }
-
-        public boolean isCommon() {
-            return this == COMMON;
-        }
-    }
-
-    public interface TraitMarker {
     }
 }
