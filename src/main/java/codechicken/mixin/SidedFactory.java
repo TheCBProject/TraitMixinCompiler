@@ -98,6 +98,7 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
 
     protected void loadServices(Class<? extends TraitMarker> markerService) {
         SimpleServiceLoader.load(markerService, tName -> {
+            tName = tName.replace('.', '/');
             LOGGER.info("Trait: {}", tName);
             ClassNode info = mixinCompiler.getClassNode(tName);
             if (info == null) {
