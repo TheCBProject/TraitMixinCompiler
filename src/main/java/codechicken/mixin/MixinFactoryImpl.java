@@ -77,7 +77,7 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
             throw new IllegalArgumentException("Trait '" + tName + "' with resolved parent '" + parentName + "' does not extend base type '" + Utils.asmName(baseType) + "'");
         }
         mixinCompiler.registerTrait(cNode);
-        key = new TraitKeyImpl(tName);
+        key = new TraitKey(tName);
         registeredTraits.put(tName, key);
         return key;
     }
@@ -103,7 +103,7 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
 
     private synchronized F compile(ImmutableSet<TraitKey> traits) {
         Class<? extends B> clazz = classCache.computeIfAbsent(traits, e -> {
-            Set<String> traitNames = FastStream.of(traits).map(TraitKey::getTName).toImmutableSet();
+            Set<String> traitNames = FastStream.of(traits).map(TraitKey::tName).toImmutableSet();
             Class<? extends B> compiled = mixinCompiler.compileMixinClass(nextName(), Utils.asmName(baseType), traitNames);
             traitLookup.put(compiled, traits);
             return compiled;
@@ -113,36 +113,5 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
 
     private String nextName() {
         return baseType.getSimpleName() + "_" + classSuffix + "$$" + counter.getAndIncrement();
-    }
-
-    private static class TraitKeyImpl implements TraitKey {
-
-        private final String tName;
-
-        private TraitKeyImpl(String tName) {
-            this.tName = tName;
-        }
-
-        @Override
-        public String getTName() {
-            return tName;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (super.equals(obj)) {
-                return true;
-            }
-            if (!(obj instanceof TraitKeyImpl)) {
-                return false;
-            }
-            TraitKeyImpl other = (TraitKeyImpl) obj;
-            return Objects.equals(getTName(), other.getTName());
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(tName);
-        }
     }
 }

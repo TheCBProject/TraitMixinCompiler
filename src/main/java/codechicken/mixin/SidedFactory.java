@@ -150,8 +150,8 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
         String tName = Utils.asmName(trait);
         TraitKey existing = map.get(marker);
         if (existing != null) {
-            if (existing.getTName().equals(tName)) {
-                LOGGER.error("Attempted to re-register trait for '{}' with a different impl. Ignoring. Existing: '{}', New: '{}'", marker, existing.getTName(), tName);
+            if (existing.tName().equals(tName)) {
+                LOGGER.error("Attempted to re-register trait for '{}' with a different impl. Ignoring. Existing: '{}', New: '{}'", marker, existing.tName(), tName);
             } else {
                 LOGGER.error("Skipping re-register of trait for '{}' and impl '{}'", marker, tName);
             }

@@ -58,15 +58,11 @@ public interface MixinFactory<B, F> {
      */
     ImmutableSet<TraitKey> getTraitsForClass(Class<?> clazz);
 
-    interface TraitKey {
-
-        /**
-         * Gets the class name for this trait.
-         *
-         * @return The class name.
-         */
-        @AsmName
-        String getTName();
+    /**
+     * Unique key representing a registered trait.
+     *
+     * @param tName The trait class name.
+     */
+    record TraitKey(String tName) {
     }
-
 }
