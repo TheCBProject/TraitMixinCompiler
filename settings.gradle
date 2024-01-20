@@ -12,7 +12,6 @@ plugins {
 rootProject.name = 'TraitMixinCompiler'
 
 include 'core'
-include 'scala'
 
 rootProject.children.each {
     it.projectDir = file("modules/${it.name}")

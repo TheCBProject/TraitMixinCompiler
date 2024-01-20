@@ -1,1 +1,2 @@
 codechicken.mixin.api.MixinLanguageSupport$JavaMixinLanguageSupport
+codechicken.mixin.scala.MixinScalaLanguageSupport
