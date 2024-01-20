@@ -10,9 +10,3 @@ plugins {
 }
 
 rootProject.name = 'TraitMixinCompiler'
-
-include 'core'
-
-rootProject.children.each {
-    it.projectDir = file("modules/${it.name}")
-}

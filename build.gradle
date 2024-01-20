@@ -1,82 +1,108 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    withSourcesJar()
+}
+
 group 'codechicken'
 version '2.0.0'
+archivesBaseName = 'TraitMixinCompiler'
 
 version = "$version." + (System.getenv("BUILD_NUMBER") ?: "1")
 println "Starting build of ${name}, Version: ${version}"
 
-subprojects { subProject ->
-    apply plugin: 'java'
-    apply plugin: 'java-library'
-    apply plugin: 'maven-publish'
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://maven.covers1624.net/" }
+    maven { url "https://maven.minecraftforge.net/" }
+}
 
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
-        }
-        withSourcesJar()
+dependencies {
+    api 'org.slf4j:slf4j-api:2.0.1'
+
+    api 'net.covers1624:Quack:0.4.10.89'
+
+    api('io.codechicken:ChickenASM:4.0.0.1') {
+        transitive = false
     }
+    api 'org.ow2.asm:asm:9.2'
+    api 'org.ow2.asm:asm-tree:9.2'
+    api 'org.ow2.asm:asm-commons:9.2'
+    api 'org.ow2.asm:asm-util:9.2'
 
+    api 'com.google.guava:guava:31.0.1-jre'
+
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    compileOnly 'org.jetbrains:annotations:22.0.0'
+
+    testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.32'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+jar {
+    manifest {
+        attributes 'FMLModType': 'GAMELIBRARY'
+    }
+}
+
+publishing {
     repositories {
-        mavenLocal()
-        mavenCentral()
-        maven { url "https://maven.covers1624.net/" }
-        maven { url "https://maven.minecraftforge.net/" }
-    }
-
-    dependencies {
-        compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
-        compileOnly 'org.jetbrains:annotations:22.0.0'
-    }
-
-    publishing {
-        repositories {
-            if (System.getenv('MAVEN_PASS')) {
-                maven {
-                    url "https://nexus.covers1624.net/repository/maven-releases/"
-                    credentials {
-                        username 'covers1624'
-                        password System.getenv('MAVEN_PASS')
-                    }
+        if (System.getenv('MAVEN_PASS')) {
+            maven {
+                url "https://nexus.covers1624.net/repository/maven-releases/"
+                credentials {
+                    username 'covers1624'
+                    password System.getenv('MAVEN_PASS')
                 }
             }
         }
-        publications {
-            publication(MavenPublication) {
-                group = rootProject.group
-                version = rootProject.version
+    }
+    publications {
+        TraitMixinCompiler(MavenPublication) {
+            group = rootProject.group
+            version = rootProject.version
 
-                pom {
-                    name = archivesBaseName
-                    description = archivesBaseName
+            from components['java']
+
+            pom {
+                name = archivesBaseName
+                description = archivesBaseName
+                url = "https://github.com/TheCBProject/TraitMixinCompiler"
+                scm {
                     url = "https://github.com/TheCBProject/TraitMixinCompiler"
-                    scm {
-                        url = "https://github.com/TheCBProject/TraitMixinCompiler"
-                        connection = "scm:git:git://github.com/TheCBProject/TraitMixinCompiler.git"
-                        connection = "scm:git:git@github.com:TheCBProject/TraitMixinCompiler.git"
-                    }
+                    connection = "scm:git:git://github.com/TheCBProject/TraitMixinCompiler.git"
+                    connection = "scm:git:git@github.com:TheCBProject/TraitMixinCompiler.git"
+                }
 
-                    issueManagement {
-                        system = 'github'
-                        url = "https://github.com/TheCBProject/TraitMixinCompiler/issues"
+                issueManagement {
+                    system = 'github'
+                    url = "https://github.com/TheCBProject/TraitMixinCompiler/issues"
+                }
+                licenses {
+                    license {
+                        name = "MIT"
+                        url = "https://raw.githubusercontent.com/TheCBProject/TraitMixinCompiler/master/LICENSE.txt"
+                        distribution = 'repo'
                     }
-                    licenses {
-                        license {
-                            name = "MIT"
-                            url = "https://raw.githubusercontent.com/TheCBProject/TraitMixinCompiler/master/LICENSE.txt"
-                            distribution = 'repo'
-                        }
+                }
+                developers {
+                    developer {
+                        id = 'covers1624'
+                        name = 'covers1624'
                     }
-                    developers {
-                        developer {
-                            id = 'covers1624'
-                            name = 'covers1624'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id = 'chicken-bones'
-                            name = 'chicken-bones'
-                        }
+                }
+                developers {
+                    developer {
+                        id = 'chicken-bones'
+                        name = 'chicken-bones'
                     }
                 }
             }
