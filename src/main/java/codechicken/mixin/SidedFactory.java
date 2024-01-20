@@ -28,8 +28,8 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SidedFactory.class);
 
-    protected final Map<String, TraitKey> clientTraits = new HashMap<>();
-    protected final Map<String, TraitKey> serverTraits = new HashMap<>();
+    protected final Map<Class<?>, TraitKey> clientTraits = new HashMap<>();
+    protected final Map<Class<?>, TraitKey> serverTraits = new HashMap<>();
 
     protected final Map<Class<?>, ImmutableSet<TraitKey>> clientObjectTraitCache = new HashMap<>();
     protected final Map<Class<?>, ImmutableSet<TraitKey>> serverObjectTraitCache = new HashMap<>();
@@ -39,14 +39,14 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
     }
 
     /**
-     * Overload of {@link #registerTrait(String, String, String)}, using the same
+     * Overload of {@link #registerTrait(Class, Class, Class)}, using the same
      * trait impl for client and server.
      *
      * @param marker The Marker class, to be found in the part instances class hierarchy.
      */
     @AsmName
     @JavaName
-    public void registerTrait(String marker, String trait) {
+    public void registerTrait(Class<?> marker, Class<?> trait) {
         registerTrait(marker, trait, trait);
     }
 
@@ -60,15 +60,13 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
      */
     @AsmName
     @JavaName
-    public void registerTrait(String marker, @Nullable String clientTrait, @Nullable String serverTrait) {
-        marker = asmName(marker);
-
+    public void registerTrait(Class<?> marker, @Nullable Class<?> clientTrait, @Nullable Class<?> serverTrait) {
         if (clientTrait != null) {
-            register(clientTraits, marker, asmName(clientTrait));
+            register(clientTraits, marker, clientTrait);
         }
 
         if (serverTrait != null) {
-            register(serverTraits, marker, asmName(serverTrait));
+            register(serverTraits, marker, serverTrait);
         }
     }
 
@@ -82,9 +80,8 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
      */
     public ImmutableSet<TraitKey> getTraitsForObject(T thing, boolean client) {
         return getObjectTraitCache(client).computeIfAbsent(thing.getClass(), clazz -> {
-            Map<String, TraitKey> traits = getTraitMap(client);
+            Map<Class<?>, TraitKey> traits = getTraitMap(client);
             return hierarchy(clazz)
-                    .map(Utils::asmName)
                     .map(traits::get)
                     .filter(Objects::nonNull)
                     .toImmutableSet();
@@ -97,8 +94,15 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
     protected abstract Side getRuntimeSide();
 
     protected void loadServices(Class<? extends TraitMarker> markerService) {
-        SimpleServiceLoader.load(markerService, tName -> {
-            tName = tName.replace('.', '/');
+        SimpleServiceLoader.load(markerService, cName -> {
+            Class<?> tClass;
+            try {
+                tClass = Class.forName(cName, true, mixinCompiler.getMixinBackend().getContextClassLoader());
+            } catch (ClassNotFoundException ex) {
+                LOGGER.error("Failed to load class for trait.");
+                return;
+            }
+            String tName = cName.replace('.', '/');
             LOGGER.info("Trait: {}", tName);
             ClassNode info = mixinCompiler.getClassNode(tName);
             if (info == null) {
@@ -113,14 +117,14 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
                 return;
             }
             for (SidedTrait ann : annotations) {
-                String marker = ann.value().getName();
+                Class<?> marker = ann.value();
                 Side side = ann.side();
                 LOGGER.info("    Marker: {}, Side: {}", marker, side);
                 if (side.isCommon() || side.isClient() && getRuntimeSide().isClient()) {
-                    register(clientTraits, marker, tName);
+                    register(clientTraits, marker, tClass);
                 }
                 if (side.isCommon() || side.isServer()) {
-                    register(serverTraits, marker, tName);
+                    register(serverTraits, marker, tClass);
                 }
             }
         });
@@ -134,7 +138,7 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
         );
     }
 
-    protected Map<String, TraitKey> getTraitMap(boolean client) {
+    protected Map<Class<?>, TraitKey> getTraitMap(boolean client) {
         return client ? clientTraits : serverTraits;
     }
 
@@ -142,13 +146,14 @@ public abstract class SidedFactory<B, F, T> extends MixinFactoryImpl<B, F> {
         return client ? clientObjectTraitCache : serverObjectTraitCache;
     }
 
-    protected void register(Map<String, TraitKey> map, String marker, String trait) {
+    protected void register(Map<Class<?>, TraitKey> map, Class<?> marker, Class<?> trait) {
+        String tName = Utils.asmName(trait);
         TraitKey existing = map.get(marker);
         if (existing != null) {
-            if (existing.getTName().equals(trait)) {
-                LOGGER.error("Attempted to re-register trait for '{}' with a different impl. Ignoring. Existing: '{}', New: '{}'", marker, existing.getTName(), trait);
+            if (existing.getTName().equals(tName)) {
+                LOGGER.error("Attempted to re-register trait for '{}' with a different impl. Ignoring. Existing: '{}', New: '{}'", marker, existing.getTName(), tName);
             } else {
-                LOGGER.error("Skipping re-register of trait for '{}' and impl '{}'", marker, trait);
+                LOGGER.error("Skipping re-register of trait for '{}' and impl '{}'", marker, tName);
             }
             return;
         }

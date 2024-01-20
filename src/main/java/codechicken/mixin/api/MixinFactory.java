@@ -1,6 +1,5 @@
 package codechicken.mixin.api;
 
-import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
 import org.objectweb.asm.tree.ClassNode;
 
@@ -19,12 +18,12 @@ public interface MixinFactory<B, F> {
     MixinCompiler getMixinCompiler();
 
     /**
-     * Registers a trait with the given class name.
+     * Registers a trait.
      *
-     * @param tName The ClassName for the trait.
+     * @param tClass The trait class.
      * @return a TraitKey for using this registered trait.
      */
-    TraitKey registerTrait(@AsmName String tName);
+    TraitKey registerTrait(@AsmName Class<?> tClass);
 
     /**
      * Registers a binary trait. Used for traits which
@@ -34,16 +33,6 @@ public interface MixinFactory<B, F> {
      * @return a TraitKey for using this registered trait.
      */
     TraitKey registerTrait(@AsmName ClassNode cNode);
-
-    /**
-     * Registers a trait.
-     *
-     * @param trait The Class for the trait.
-     * @return a TraitKey for using this registered trait.
-     */
-    default TraitKey registerTrait(Class<?> trait) {
-        return registerTrait(Utils.asmName(trait));
-    }
 
     /**
      * Returns a factory ({@link F}) capable of constructing a new {@link B} with the given set of traits applied.

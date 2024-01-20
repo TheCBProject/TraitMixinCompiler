@@ -20,7 +20,6 @@ import java.util.function.BiConsumer;
 public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
 
     protected final AtomicInteger counter = new AtomicInteger();
-    protected final List<BiConsumer<Class<? extends B>, ImmutableSet<TraitKey>>> compileCallbacks = new ArrayList<>();
     protected final Map<ImmutableSet<TraitKey>, Class<? extends B>> classCache = new HashMap<>();
     protected final Map<ImmutableSet<TraitKey>, F> factoryCache = new HashMap<>();
     protected final Map<Class<?>, ImmutableSet<TraitKey>> traitLookup = new HashMap<>();
@@ -50,7 +49,8 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
     }
 
     @Override
-    public synchronized TraitKey registerTrait(String tName) {
+    public synchronized TraitKey registerTrait(Class<?> tClass) {
+        String tName = Utils.asmName(tClass);
         TraitKey trait = registeredTraits.get(tName);
         if (trait != null) return trait;
 

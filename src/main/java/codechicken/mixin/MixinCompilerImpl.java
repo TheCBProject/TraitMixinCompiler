@@ -257,6 +257,12 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
+    @SuppressWarnings ("unchecked")
+    public <T> Class<T> getDefinedClass(String name) {
+        return (Class<T>) Objects.requireNonNull(classLoader.getDefinedClass(name), "Class was not defined by MixinCompiler. " + name);
+    }
+
+    @Override
     public MixinInfo registerTrait(ClassNode cNode) {
         // Cache hit.
         MixinInfo info = mixinMap.get(cNode.name);
@@ -322,6 +328,10 @@ public class MixinCompilerImpl implements MixinCompiler {
 
         public Class<?> defineClass(String cName, byte[] bytes) {
             return defineClass(cName.replace('/', '.'), bytes, 0, bytes.length);
+        }
+
+        public Class<?> getDefinedClass(String cName) {
+            return findLoadedClass(cName.replace('/', '.'));
         }
     }
 

@@ -143,6 +143,15 @@ public interface MixinCompiler {
     <T> Class<T> defineClass(@AsmName String name, byte[] bytes);
 
     /**
+     * Get a previously defined class.
+     *
+     * @param name The name of the previously defined class.
+     * @return The defined class.
+     * @throws NullPointerException If the class was not found.
+     */
+    <T> Class<T> getDefinedClass(@AsmName @JavaName String name);
+
+    /**
      * Compiles a new class with the given name, super Class, and traits.
      *
      * @param name       The name for the class.
