@@ -12,7 +12,6 @@ plugins {
 rootProject.name = 'TraitMixinCompiler'
 
 include 'core'
-include 'forge'
 include 'scala'
 
 rootProject.children.each {
