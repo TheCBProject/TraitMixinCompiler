@@ -29,7 +29,7 @@ dependencies {
 
     api 'net.covers1624:Quack:0.4.10.89'
 
-    api('io.codechicken:ChickenASM:4.0.0.1') {
+    api('io.codechicken:ChickenASM:4.0.0.18') {
         transitive = false
     }
     api 'org.ow2.asm:asm:9.2'
