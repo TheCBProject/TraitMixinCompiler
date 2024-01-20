@@ -21,29 +21,19 @@ import java.lang.invoke.MethodType;
 public interface MixinBackend {
 
     /**
+     * The class loader to delegate class loading calls to.
+     *
+     * @return The context class loader.
+     */
+    ClassLoader getContextClassLoader();
+
+    /**
      * Gets the bytes for a class.
      *
      * @param name The class name.
      * @return The bytes for the class.
      */
     byte @Nullable [] getBytes(@AsmName String name);
-
-    /**
-     * Defines a class.
-     *
-     * @param name  The name for the class.
-     * @param bytes The bytes for the class.
-     * @return The defined class.
-     */
-    <T> Class<T> defineClass(String name, byte[] bytes);
-
-    /**
-     * Loads a class.
-     *
-     * @param name The class name.
-     * @return The loaded class.
-     */
-    @Nullable Class<?> loadClass(String name);
 
     /**
      * Allows a MixinBackend to filter a method based on the annotation value for 'value'.
@@ -64,17 +54,6 @@ public interface MixinBackend {
      */
     class SimpleMixinBackend implements MixinBackend {
 
-        protected static final MethodHandle m_defineClass;
-
-        static {
-            try {
-                m_defineClass = PrivateLookups.getTrustedLookup()
-                        .findVirtual(ClassLoader.class, "defineClass", MethodType.methodType(Class.class, byte[].class, int.class, int.class));
-            } catch (Throwable e) {
-                throw new RuntimeException("Unable to retrieve methods via reflection.", e);
-            }
-        }
-
         private final ClassLoader classLoader;
 
         public SimpleMixinBackend() {
@@ -86,6 +65,11 @@ public interface MixinBackend {
         }
 
         @Override
+        public ClassLoader getContextClassLoader() {
+            return classLoader;
+        }
+
+        @Override
         public byte @Nullable [] getBytes(String name) {
             try (InputStream is = classLoader.getResourceAsStream(name + ".class")) {
                 if (is == null) {
@@ -94,25 +78,6 @@ public interface MixinBackend {
                 return IOUtils.toBytes(is);
             } catch (IOException e) {
                 SneakyUtils.throwUnchecked(new ClassNotFoundException("Could not load bytes for '" + name + "'.", e));
-                return null;
-            }
-        }
-
-        @Override
-        @SuppressWarnings ("unchecked")
-        public <T> Class<T> defineClass(String name, byte[] bytes) {
-            try {
-                return (Class<T>) m_defineClass.invokeExact(classLoader, bytes, 0, bytes.length);
-            } catch (Throwable e) {
-                throw new RuntimeException("Failed to define class '" + name + "'.", e);
-            }
-        }
-
-        @Override
-        public Class<?> loadClass(String name) {
-            try {
-                return classLoader.loadClass(name);
-            } catch (ClassNotFoundException e) {
                 return null;
             }
         }

@@ -44,9 +44,10 @@ public class MixinCompilerImpl implements MixinCompiler {
     private final List<MixinLanguageSupport> languageSupportList;
     private final Map<String, MixinLanguageSupport> languageSupportMap;
 
-    private final Map<String, byte[]> traitByteMap = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, byte[]> classBytesCache = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, ClassInfo> infoCache = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, MixinInfo> mixinMap = Collections.synchronizedMap(new HashMap<>());
+    private final MixinClassLoader classLoader;
 
     public MixinCompilerImpl() {
         this(new MixinBackend.SimpleMixinBackend());
@@ -85,6 +86,8 @@ public class MixinCompilerImpl implements MixinCompiler {
                 .toMap(Map.Entry::getKey, e -> e.getValue().instance);
         long end = System.nanoTime();
         LOGGER.atLevel(LOG_LEVEL).log("Loaded {} MixinLanguageSupport instances in {}.", languageSupportList.size(), Utils.timeString(start, end));
+
+        classLoader = new MixinClassLoader(mixinBackend);
     }
 
     @Override
@@ -128,7 +131,13 @@ public class MixinCompilerImpl implements MixinCompiler {
     public <T> Class<T> compileMixinClass(String name, String superClass, Set<String> traits) {
         ClassInfo baseInfo = getClassInfo(superClass);
         if (baseInfo == null) throw new IllegalArgumentException("Provided super class does not exist.");
-        if (traits.isEmpty()) return (Class<T>) Objects.requireNonNull(mixinBackend.loadClass(baseInfo.getName().replace('/', '.')));
+        if (traits.isEmpty()) {
+            try {
+                return (Class<T>) Class.forName(baseInfo.getName().replace('/', '.'), true, mixinBackend.getContextClassLoader());
+            } catch (ClassNotFoundException ex) {
+                throw new RuntimeException("Base class can't be loaded??", ex);
+            }
+        }
 
         long start = System.nanoTime();
         List<MixinInfo> baseTraits = FastStream.of(traits)
@@ -241,12 +250,10 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
+    @SuppressWarnings ("unchecked")
     public <T> Class<T> defineClass(String name, byte[] bytes) {
-        String asmName = Utils.asmName(name);
-        traitByteMap.put(asmName, bytes);
-        infoCache.remove(asmName);
         debugger.defineClass(name, bytes);
-        return mixinBackend.defineClass(name, bytes);
+        return (Class<T>) classLoader.defineClass(name, bytes);
     }
 
     @Override
@@ -287,8 +294,13 @@ public class MixinCompilerImpl implements MixinCompiler {
             return obtainInfo(cNode);
         }
 
-        Class<?> clazz = mixinBackend.loadClass(cName.replace('/', '.'));
-        if (clazz != null) return new ReflectionClassInfo(this, clazz);
+        try {
+            return new ReflectionClassInfo(
+                    this,
+                    Class.forName(cName.replace('/', '.'), true, mixinBackend.getContextClassLoader())
+            );
+        } catch (ClassNotFoundException ignored) {
+        }
         return null;
     }
 
@@ -296,10 +308,21 @@ public class MixinCompilerImpl implements MixinCompiler {
     public ClassNode getClassNode(String name) {
         if (name.equals("java/lang/Object")) return null;
 
-        byte[] bytes = traitByteMap.computeIfAbsent(name, mixinBackend::getBytes);
+        byte[] bytes = classBytesCache.computeIfAbsent(name, mixinBackend::getBytes);
         if (bytes == null) return null;
 
         return ASMHelper.createClassNode(bytes, EXPAND_FRAMES);
+    }
+
+    private static class MixinClassLoader extends ClassLoader {
+
+        public MixinClassLoader(MixinBackend mixinBackend) {
+            super(mixinBackend.getContextClassLoader());
+        }
+
+        public Class<?> defineClass(String cName, byte[] bytes) {
+            return defineClass(cName.replace('/', '.'), bytes, 0, bytes.length);
+        }
     }
 
     private class LanguageSupportInstance {
