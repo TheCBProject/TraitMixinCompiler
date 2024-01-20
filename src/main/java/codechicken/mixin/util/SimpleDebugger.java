@@ -1,6 +1,7 @@
 package codechicken.mixin.util;
 
 import codechicken.mixin.api.MixinDebugger;
+import net.covers1624.quack.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.util.Textifier;
@@ -24,51 +25,38 @@ public class SimpleDebugger implements MixinDebugger {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SimpleDebugger.class);
 
-    private final Path root;
+    private final Path folder;
     private final DumpType type;
 
-    public SimpleDebugger(Path root, DumpType type) {
-        this.root = root;
+    public SimpleDebugger(Path folder, DumpType type) {
+        this.folder = folder;
         this.type = type;
         try {
-            if (Files.exists(root)) {
-                if (!Files.isDirectory(root)) {
-                    LOGGER.warn("Expected '{}' to be a directory. Overwriting..", root);
-                    Files.delete(root);
+            if (Files.exists(folder)) {
+                if (!Files.isDirectory(folder)) {
+                    LOGGER.warn("Expected '{}' to be a directory. Overwriting..", folder);
+                    Files.delete(folder);
                 } else {
-                    LOGGER.atLevel(LOG_LEVEL).log("Clearing debugger output. '{}'", root.toAbsolutePath());
-                    Utils.deleteFolder(root);
+                    LOGGER.atLevel(LOG_LEVEL).log("Clearing debugger output. '{}'", folder.toAbsolutePath());
+                    Utils.deleteFolder(folder);
                 }
             }
-            Files.createDirectories(root);
+            Files.createDirectories(folder);
         } catch (IOException e) {
             LOGGER.error("Encountered an error setting up SimpleDebugger.", e);
         }
     }
 
     @Override
-    public void defineInternal(String name, byte[] bytes) {
-        dump("internal_define", name, bytes);
-    }
-
-    @Override
     public void defineClass(String name, byte[] bytes) {
-        dump("define", name, bytes);
-    }
-
-    public void dump(String from, String name, byte[] bytes) {
         name = name.replace("/", ".");
         try {
-            Path folder = root.resolve(from);
-            if (!Files.exists(folder)) {
-                Files.createDirectories(folder);
-            }
             switch (type) {
                 case TEXT: {
                     try {
-                        LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' from {} as text", name, from);
+                        LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' as text", name);
                         Path path = folder.resolve(name + ".txt");
-                        try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+                        try (BufferedWriter writer = Files.newBufferedWriter(IOUtils.makeParents(path))) {
                             ClassVisitor cv = new TraceClassVisitor(null, new Textifier(), new PrintWriter(writer));
                             ClassReader reader = new ClassReader(bytes);
                             reader.accept(cv, ClassReader.EXPAND_FRAMES);
@@ -82,9 +70,9 @@ public class SimpleDebugger implements MixinDebugger {
                     }
                 }
                 case BINARY: {
-                    LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' from {} as binary.", name, from);
+                    LOGGER.atLevel(LOG_LEVEL).log("Dumping '{}' as binary.", name);
                     Path path = folder.resolve(name + ".class");
-                    try (OutputStream os = Files.newOutputStream(path)) {
+                    try (OutputStream os = Files.newOutputStream(IOUtils.makeParents(path))) {
                         os.write(bytes);
                     }
                     break;

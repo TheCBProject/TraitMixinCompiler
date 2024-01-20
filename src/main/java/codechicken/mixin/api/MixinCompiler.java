@@ -94,9 +94,7 @@ public interface MixinCompiler {
      * @return The ClassInfo.
      */
     @Nullable
-    default ClassInfo getClassInfo(ClassNode node) {
-        return getClassInfo(node.name);
-    }
+    ClassInfo getClassInfo(ClassNode node);
 
     /**
      * Overload for {@link #getClassInfo(String)}, taking a {@link Class} instead.
@@ -134,18 +132,6 @@ public interface MixinCompiler {
      */
     @Nullable
     MixinInfo getMixinInfo(@AsmName String name);
-
-    /**
-     * 'Define' a class internally.
-     * Calls to {@link #getClassNode(String)} will return this data instead.
-     * Useful for cases where a generated class needs to be passed through
-     * {@link JavaTraitGenerator} as it cannot be defined beforehand.
-     * This method does NOT define the class with the ClassLoader.
-     *
-     * @param name  The class name.
-     * @param bytes The bytes.
-     */
-    void defineInternal(@AsmName String name, byte[] bytes);
 
     /**
      * Defines a class.

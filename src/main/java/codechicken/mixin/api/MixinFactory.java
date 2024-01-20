@@ -2,6 +2,7 @@ package codechicken.mixin.api;
 
 import codechicken.mixin.util.Utils;
 import com.google.common.collect.ImmutableSet;
+import org.objectweb.asm.tree.ClassNode;
 
 /**
  * Represents a 'user' facing interface for interacting and caching the {@link MixinCompiler}.
@@ -24,6 +25,15 @@ public interface MixinFactory<B, F> {
      * @return a TraitKey for using this registered trait.
      */
     TraitKey registerTrait(@AsmName String tName);
+
+    /**
+     * Registers a binary trait. Used for traits which
+     * are generated at runtime.
+     *
+     * @param cNode The {@link ClassNode} for the trait.
+     * @return a TraitKey for using this registered trait.
+     */
+    TraitKey registerTrait(@AsmName ClassNode cNode);
 
     /**
      * Registers a trait.

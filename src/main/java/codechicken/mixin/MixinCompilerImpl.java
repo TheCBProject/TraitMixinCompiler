@@ -98,12 +98,22 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
-    public ClassInfo getClassInfo(String name) {
+    public @Nullable ClassInfo getClassInfo(String name) {
         // Do not compress this down to a computeIfAbsent, obtainInfo can modify the infoCache map.
         ClassInfo info = infoCache.get(name);
         if (info == null) {
             info = obtainInfo(name);
             infoCache.put(name, info);
+        }
+        return info;
+    }
+
+    @Override
+    public @Nullable ClassInfo getClassInfo(ClassNode cNode) {
+        ClassInfo info = infoCache.get(cNode.name);
+        if (info == null) {
+            info = obtainInfo(cNode);
+            infoCache.put(cNode.name, info);
         }
         return info;
     }
@@ -231,20 +241,12 @@ public class MixinCompilerImpl implements MixinCompiler {
     }
 
     @Override
-    public void defineInternal(String name, byte[] bytes) {
+    public <T> Class<T> defineClass(String name, byte[] bytes) {
         String asmName = Utils.asmName(name);
         traitByteMap.put(asmName, bytes);
         infoCache.remove(asmName);
-        debugger.defineInternal(name, bytes);
-    }
-
-    @Override
-    public <T> Class<T> defineClass(String name, byte[] bytes) {
-        String asmName = Utils.asmName(name);
-        defineInternal(asmName, bytes);
         debugger.defineClass(name, bytes);
         return mixinBackend.defineClass(name, bytes);
-
     }
 
     @Override
@@ -268,19 +270,25 @@ public class MixinCompilerImpl implements MixinCompiler {
         throw new IllegalStateException("No MixinLanguageSupport wished to handle class '" + cNode.name + "'");
     }
 
-    private @Nullable ClassInfo obtainInfo(String name) {
-        ClassNode cNode = getClassNode(name);
-        if (cNode != null) {
-            for (MixinLanguageSupport languageSupport : languageSupportList) {
-                ClassInfo info = languageSupport.obtainInfo(cNode);
-                if (info != null) {
-                    return info;
-                }
+    private ClassInfo obtainInfo(ClassNode cNode) {
+        for (MixinLanguageSupport languageSupport : languageSupportList) {
+            ClassInfo info = languageSupport.obtainInfo(cNode);
+            if (info != null) {
+                return info;
             }
-        } else {
-            Class<?> clazz = mixinBackend.loadClass(name.replace('/', '.'));
-            if (clazz != null) return new ReflectionClassInfo(this, clazz);
         }
+        // In theory not possible, the Java plugin will always create nodes for
+        throw new IllegalStateException("Java plugin did not create ClassInfo for existing node: " + cNode.name);
+    }
+
+    private @Nullable ClassInfo obtainInfo(String cName) {
+        ClassNode cNode = getClassNode(cName);
+        if (cNode != null) {
+            return obtainInfo(cNode);
+        }
+
+        Class<?> clazz = mixinBackend.loadClass(cName.replace('/', '.'));
+        if (clazz != null) return new ReflectionClassInfo(this, clazz);
         return null;
     }
 

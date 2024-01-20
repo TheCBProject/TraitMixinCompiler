@@ -51,11 +51,20 @@ public class MixinFactoryImpl<B, F> implements MixinFactory<B, F> {
 
     @Override
     public synchronized TraitKey registerTrait(String tName) {
+        TraitKey trait = registeredTraits.get(tName);
+        if (trait != null) return trait;
+
         ClassNode cNode = mixinCompiler.getClassNode(tName);
         if (cNode == null) {
             SneakyUtils.throwUnchecked(new ClassNotFoundException(tName));
             return null;
         }
+        return registerTrait(cNode);
+    }
+
+    @Override
+    public synchronized TraitKey registerTrait(ClassNode cNode) {
+        String tName = cNode.name;
         TraitKey key = registeredTraits.get(tName);
         if (key != null) {
             return key;

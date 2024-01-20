@@ -5,15 +5,9 @@ package codechicken.mixin.api;
  */
 public interface MixinDebugger {
 
-    void defineInternal(@AsmName String name, byte[] bytes);
-
     void defineClass(@AsmName String name, byte[] bytes);
 
     class NullDebugger implements MixinDebugger {
-
-        @Override
-        public void defineInternal(String name, byte[] bytes) {
-        }
 
         @Override
         public void defineClass(String name, byte[] bytes) {
