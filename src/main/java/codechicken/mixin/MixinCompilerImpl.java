@@ -165,8 +165,15 @@ public class MixinCompilerImpl implements MixinCompiler {
         List<MixinInfo> prevInfos = new ArrayList<>();
 
         for (MixinInfo t : mixinInfos) {
-            mInit.visitVarInsn(ALOAD, 0);
-            mInit.visitMethodInsn(INVOKESTATIC, t.name(), "$init$", "(L" + t.name() + ";)V", true);
+            {
+                int idx = 0;
+                mInit.visitVarInsn(ALOAD, idx++);
+                for (Type arg : Type.getArgumentTypes(cInit.getDesc())) {
+                    mInit.visitVarInsn(arg.getOpcode(ILOAD), idx);
+                    idx += arg.getSize();
+                }
+                mInit.visitMethodInsn(INVOKESTATIC, t.name(), "$init$", Utils.staticDesc(t.name(), cInit.getDesc()), true);
+            }
 
             for (FieldMixin f : t.fields()) {
                 FieldNode fv = (FieldNode) cNode.visitField(ACC_PRIVATE, f.getAccessName(t.name()), f.desc(), null, null);

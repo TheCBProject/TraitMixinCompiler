@@ -89,7 +89,6 @@ public class JavaTraitGenerator {
     }
 
     protected MixinInfo operate() {
-
         beforeTransform();
 
         sNode.visit(V1_8, ACC_PUBLIC, cNode.name + "$", null, "java/lang/Object", new String[0]);
@@ -219,15 +218,17 @@ public class JavaTraitGenerator {
 
     private void convertMethod(MethodNode mNode) {
         if (mNode.name.equals("<init>")) {
-            if (!mNode.desc.equals("()V")) {
-                throw new IllegalArgumentException("Constructor arguments are not permitted " + mNode.name + " as a mixin trait");
-            }
             MethodNode mv = staticClone(mNode, "$init$", ACC_PUBLIC);
 
-            //Strip super constructor call.
+            // Strip super constructor call.
             InsnListSection insns = new InsnListSection();
-            insns.add(new VarInsnNode(ALOAD, 0));
-            insns.add(new MethodInsnNode(INVOKESPECIAL, cNode.superName, "<init>", "()V", false));
+            int idx = 0;
+            insns.add(new VarInsnNode(ALOAD, idx++));
+            for (Type arg : Type.getArgumentTypes(mNode.desc)) {
+                insns.add(new VarInsnNode(arg.getOpcode(ILOAD), idx));
+                idx += arg.getSize();
+            }
+            insns.add(new MethodInsnNode(INVOKESPECIAL, cNode.superName, "<init>", mNode.desc, false));
 
             InsnListSection mInsns = new InsnListSection(mv.instructions);
             InsnListSection found = InsnComparator.matches(mInsns, insns, Collections.emptySet());
@@ -235,6 +236,7 @@ public class JavaTraitGenerator {
                 throw new IllegalArgumentException("Invalid constructor insn sequence " + cNode.name + "\n" + mInsns);
             }
             found.trim(Collections.emptySet()).remove();
+
             staticTransform(mv, mNode);
             return;
         }
